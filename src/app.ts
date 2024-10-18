@@ -26,7 +26,7 @@ app.get('/', async (req: Request, res: Response) => {
         res.status(401).send('Unauthorized');
         return;
     }
-
+    delete query.username;
     const queryParams = {...query, apikey: apiKey};
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
