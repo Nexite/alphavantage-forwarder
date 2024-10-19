@@ -28,6 +28,15 @@ app.get('/', async (req: Request, res: Response) => {
     }
     delete query.username;
     const queryParams = {...query, apikey: apiKey};
+    if (query.symbol) {
+        const tickers = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tickers.json'), 'utf-8'));
+        if (!tickers.includes(query.symbol as string)) {
+          // add it and save
+          tickers.push(query.symbol as string);
+          fs.writeFileSync(path.join(__dirname, '..', 'tickers.json'), JSON.stringify(tickers, null, 2));
+        }
+    }
+    console.log(queryParams);
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
     const data = await response.json();
