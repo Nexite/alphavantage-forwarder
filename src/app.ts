@@ -2,9 +2,12 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import * as db from './db';
 
 dotenv.config();
 
+
+db.createTables();
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -27,16 +30,16 @@ app.get('/', async (req: Request, res: Response) => {
         return;
     }
     delete query.username;
+
     const queryParams = {...query, apikey: apiKey};
-    if (query.symbol) {
-        const tickers = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'tickers.json'), 'utf-8'));
-        if (!tickers.includes(query.symbol as string)) {
-          // add it and save
-          tickers.push(query.symbol as string);
-          fs.writeFileSync(path.join(__dirname, '..', 'tickers.json'), JSON.stringify(tickers, null, 2));
-        }
-    }
-    console.log(queryParams);
+
+    // metrics
+    if (query.symbol) db.ticker(query.symbol as string);
+    // get ip
+    if (req.ip) db.ip(req.ip);
+    console.log(req.ip);
+
+
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
     const data = await response.json();
