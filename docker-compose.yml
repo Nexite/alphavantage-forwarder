@@ -10,4 +10,4 @@ services:
       - ALPHA_ADVANTAGE_API_KEY=${ALPHA_ADVANTAGE_API_KEY}
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
-      - ./database.db:/app/database.db:rw
+      - ./database.sqlite:/app/database.sqlite:rw

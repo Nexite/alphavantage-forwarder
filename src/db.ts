@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import fs from 'fs';
 
 export const db = new sqlite3.Database(
-    fs.existsSync('database_dev.db') ? 'database_dev.db' : 'database.db'
+    fs.existsSync('database_dev.sqlite') ? 'database_dev.sqlite' : 'database.sqlite'
 );
 
 export const createTables = () => {
