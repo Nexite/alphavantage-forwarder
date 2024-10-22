@@ -131,4 +131,5 @@ dist
 
 
 # Database
-database_dev.db
+prisma/database.sqlite
+prisma/database.sqlite-journal

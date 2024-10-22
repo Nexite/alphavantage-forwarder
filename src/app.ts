@@ -7,7 +7,6 @@ import * as db from './db';
 dotenv.config();
 
 
-db.createTables();
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -33,17 +32,16 @@ app.get('/', async (req: Request, res: Response) => {
 
     const queryParams = {...query, apikey: apiKey};
 
-    // metrics
-    if (query.symbol) db.ticker(query.symbol as string);
-    // get ip
-    if (req.ip) db.ip(req.ip);
-    console.log(req.ip);
-
 
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
     const data = await response.json();
     res.send(data);
+
+    // metrics
+    if (query.symbol) await db.ticker(query.symbol as string);
+    // get ip
+    if (req.ip) await db.ip(req.ip);
 });
 
 app.listen(port, () => {
