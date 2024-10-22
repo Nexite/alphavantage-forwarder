@@ -7,7 +7,7 @@ import TTLCache from '@isaacs/ttlcache';
 
 dotenv.config();
 
-const cache = new TTLCache<string, string>({ max: 10000, ttl: 10 * 60 * 1000 })
+const cache = new TTLCache<string, string>({ max: 10000, ttl: 5 * 60 * 1000 })
 
 
 const app = express();
