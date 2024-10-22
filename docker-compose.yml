@@ -11,4 +11,4 @@ services:
       - DATABASE_URL=file:./database.sqlite
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
-      - ./prisma/database.sqlite:/app/prisma/database.sqlite:rw
+      - ./prisma/:/app/prisma/:rw
