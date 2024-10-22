@@ -19,30 +19,35 @@ const authorizedUsers: string[] = JSON.parse(
 app.use(express.json());
 
 app.get('/', async (req: Request, res: Response) => {
-    const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
-    const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
-    // get request params
-    const query = req.query;
-    
-    if (!query.username || !authorizedUsers.includes(query.username as string)) {
-        res.status(401).send('Unauthorized');
-        return;
-    }
-    delete query.username;
+  const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
+  const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
+  // get request params
+  const query = req.query;
 
-    const queryParams = {...query, apikey: apiKey};
+  if (!query.username || !authorizedUsers.includes(query.username as string)) {
+    res.status(401).send('Unauthorized');
+    return;
+  }
+  delete query.username;
+
+  const queryParams = { ...query, apikey: apiKey };
 
 
-    // make request to alpha vantage
-    const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
-    // response might be csv or json but forwrad it
+  // make request to alpha vantage
+  const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
+  // response might be csv or json but forward it
+  if (response.headers.get('content-type') === 'application/json') {
+    const data = await response.json();
+    res.send(data);
+  } else {
     const data = await response.text();
     res.send(data);
+  }
 
-    // metrics
-    if (query.symbol) await db.ticker(query.symbol as string);
-    // get ip
-    if (req.ip) await db.ip(req.ip);
+  // metrics
+  if (query.symbol) await db.ticker(query.symbol as string);
+  // get ip
+  if (req.ip) await db.ip(req.ip);
 });
 
 app.listen(port, () => {
