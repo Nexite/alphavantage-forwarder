@@ -20,6 +20,7 @@ const authorizedUsers: string[] = JSON.parse(
 
 
 app.use(express.json());
+app.use(express.static("public"))
 
 app.get('/', async (req: Request, res: Response) => {
   const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
