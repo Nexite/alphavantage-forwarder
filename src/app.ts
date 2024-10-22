@@ -35,7 +35,8 @@ app.get('/', async (req: Request, res: Response) => {
 
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
-    const data = await response.json();
+    // response might be csv or json but forwrad it
+    const data = await response.text();
     res.send(data);
 
     // metrics
