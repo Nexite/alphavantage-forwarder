@@ -3,11 +3,11 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import * as db from './db';
-import TTLCache from '@isaacs/ttlcache';
+// import TTLCache from '@isaacs/ttlcache';
 
 dotenv.config();
 
-const cache = new TTLCache<string, string>({ max: 200, ttl: 5 * 60 * 1000 })
+// const cache = new TTLCache<string, string>({ max: 200, ttl: 5 * 60 * 1000 })
 
 
 const app = express();
@@ -37,27 +37,27 @@ app.get('/', async (req: Request, res: Response) => {
   const queryParams = Object.fromEntries(Object.entries({ ...query, apikey: apiKey }).sort());
 
   // check cache
-  const cacheKey = JSON.stringify(queryParams);
-  if (cache.has(cacheKey)) {
-    res.send(cache.get(cacheKey));
-  } else {
+  // const cacheKey = JSON.stringify(queryParams);
+  // if (cache.has(cacheKey)) {
+  //   res.send(cache.get(cacheKey));
+  // } else {
     // make request to alpha vantage
     const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
     // response might be csv or json but forward it
     if (response.headers.get('content-type') === 'application/json') {
       const data = await response.json();
       // update cache
-      cache.set(cacheKey, JSON.stringify(data));
+      // cache.set(cacheKey, JSON.stringify(data));
 
       // set json header
       res.setHeader('Content-Type', 'application/json');
       res.send(data);
     } else {
       const data = await response.text();
-      cache.set(cacheKey, data)
+      // cache.set(cacheKey, data)
       res.send(data);
     }
-  }
+  // }
 
   console.log(`NEW REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
   // metrics
