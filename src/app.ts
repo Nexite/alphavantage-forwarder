@@ -54,7 +54,7 @@ app.get('/', async (req: Request, res: Response) => {
       res.send(data);
     } else {
       const data = await response.text();
-      cache.set
+      cache.set(cacheKey, data)
       res.send(data);
     }
   }
