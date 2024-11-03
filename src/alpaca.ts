@@ -65,7 +65,7 @@ const fetchSnapshots = async (ticker: string, page: string | null = null) => {
 
 const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     const options: AlphaVantageOption[] = []
-
+    if (!snapshots) return options
     for (const [symbol, snapshot] of Object.entries(snapshots)) {
         console.log(symbol)
         const [, ticker, expiration, optionType, strike] = symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)!
