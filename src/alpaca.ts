@@ -80,11 +80,13 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
         const month = date.getMonth() + 1
         const day = date.getDate()
         const year = date.getFullYear()
-        const dateString = `${month}-${day}-${year}`
+        // const dateString = `${month}-${day}-${year}`
+        const dateString = `${year}-${month}-${day}`
 
         const strikePrice = Number(strike) / 1000
         // convert yymmdd to mm/dd/yy
-        const expirationStr = `${expiration.slice(2, 4)}-${expiration.slice(4, 6)}-${expiration.slice(0, 2)}`
+        // const expirationStr = `${expiration.slice(2, 4)}-${expiration.slice(4, 6)}-${expiration.slice(0, 2)}`
+        const expirationStr = `20${expiration.slice(0, 2)}-${expiration.slice(4, 6)}-${expiration.slice(2, 4)}`
         options.push({
             contractID: symbol,
             symbol: ticker,
