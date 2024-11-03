@@ -68,7 +68,12 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     if (!snapshots) return options
     for (const [symbol, snapshot] of Object.entries(snapshots)) {
         // https://polygon.io/knowledge-base/article/how-do-you-read-an-options-symbol
-        const [, ticker, expiration, optionType, strike] = symbol.length < 20 ? symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)! : symbol.match(/^([A-Za-z]{1,5})\d{1}(\d{6})([CP])([\d.]+)/)!
+        // remove last 9 characters
+        const temp = symbol.slice(0, -9)
+        // count number of digits
+        const nums = temp.match(/\d/g)?.length
+
+        const [, ticker, expiration, optionType, strike] = (nums == 6 ? symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/) : symbol.match(/^([A-Za-z]{1,5})\d{1}(\d{6})([CP])([\d.]+)/))!
 
         // transform snapshot.latestQuote.t to mm/d/yy format
         const date = new Date(snapshot.latestQuote.t)
