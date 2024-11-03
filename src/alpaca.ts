@@ -67,6 +67,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     const options: AlphaVantageOption[] = []
 
     for (const [symbol, snapshot] of Object.entries(snapshots)) {
+        console.log(symbol)
         const [, ticker, expiration, optionType, strike] = symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)!
 
         // transform snapshot.latestQuote.t to mm/d/yy format
