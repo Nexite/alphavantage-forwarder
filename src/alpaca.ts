@@ -69,7 +69,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     for (const [symbol, snapshot] of Object.entries(snapshots)) {
         const [, ticker, expiration, optionType, strike] = symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)!
 
-        // transform snapshot.latestQuote.t to mm/d/yyyy format
+        // transform snapshot.latestQuote.t to mm/d/yy format
         const date = new Date(snapshot.latestQuote.t)
         const month = date.getMonth() + 1
         const day = date.getDate()
@@ -77,11 +77,12 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
         const dateString = `${month}/${day}/${year}`
 
         const strikePrice = Number(strike) / 1000
-        console.log(ticker, expiration, strike, optionType)
+        // convert yymmdd to mm/dd/yy
+        const expirationStr = `${expiration.slice(2, 4)}/${expiration.slice(4, 6)}/${expiration.slice(0, 2)}`
         options.push({
             contractID: symbol,
             symbol: ticker,
-            expiration,
+            expiration: expirationStr,
             strike: strikePrice as unknown as number,
             type: optionType == "P" ? "put" : "call",
             last: snapshot.latestTrade?.p || 0,
@@ -95,6 +96,18 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
             date: dateString,
         })
     }
+    // sort by expiration then strike then type
+    options.sort((a, b) => {
+        const aExp = new Date(a.expiration)
+        const bExp = new Date(b.expiration)
+        if (aExp > bExp) return 1
+        if (aExp < bExp) return -1
+        if (a.strike > b.strike) return 1
+        if (a.strike < b.strike) return -1
+        if (a.type > b.type) return 1
+        if (a.type < b.type) return -1
+        return 0
+    })
 
     return options
 }
