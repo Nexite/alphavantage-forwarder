@@ -101,7 +101,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
 
 
 export const handleAlpaca = async (req: Request, res: Response) => {
-    const { ticker: symbol, username } = req.query
+    const { symbol, username } = req.query
     if (!username || !authorizedUsers.includes(username as string)) {
         res.status(401).send('Unauthorized');
         return;
