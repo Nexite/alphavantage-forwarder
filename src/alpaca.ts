@@ -67,8 +67,8 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     const options: AlphaVantageOption[] = []
     if (!snapshots) return options
     for (const [symbol, snapshot] of Object.entries(snapshots)) {
-        console.log(symbol)
-        const [, ticker, expiration, optionType, strike] = symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)!
+        // https://polygon.io/knowledge-base/article/how-do-you-read-an-options-symbol
+        const [, ticker, expiration, optionType, strike] = symbol.length < 20 ? symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/)! : symbol.match(/^([A-Za-z]{1,5})\d{1}(\d{6})([CP])([\d.]+)/)!
 
         // transform snapshot.latestQuote.t to mm/d/yy format
         const date = new Date(snapshot.latestQuote.t)
@@ -96,6 +96,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
             open_interest: -1,
             date: dateString,
         })
+
     }
     // sort by expiration then strike then type
     options.sort((a, b) => {
@@ -115,35 +116,42 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
 
 
 export const handleAlpaca = async (req: Request, res: Response) => {
-    const { symbol, username } = req.query
-    if (!username || !authorizedUsers.includes(username as string)) {
-        res.status(401).send('Unauthorized');
-        return;
+    try {
+
+        const { symbol, username } = req.query
+        if (!username || !authorizedUsers.includes(username as string)) {
+            res.status(401).send('Unauthorized');
+            return;
+        }
+
+        if (typeof symbol !== "string") {
+            res.status(400).json({ error: "Invalid ticker" })
+            return
+        }
+
+        // check if ticker is in cache
+        if (cache.has(symbol)) {
+            res.send(cache.get(symbol));
+        } else {
+
+            const snapshots = await fetchSnapshots(symbol)
+            const options = parseSnapshots(snapshots)
+
+
+            // convert options to csv
+            const csv = await json2csv(options)
+            cache.set(symbol, csv)
+            res.send(csv)
+        }
+
+        // metrics
+        console.log(`NEW ALPACA REQUEST: ${req.ip}, ${symbol}`);
+        if (symbol) await db.ticker(symbol as string);
+        // get ip
+        if (req.ip) await db.ip(req.ip);
     }
-
-    if (typeof symbol !== "string") {
-        res.status(400).json({ error: "Invalid ticker" })
-        return
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ error: "Internal server error" })
     }
-
-    // check if ticker is in cache
-    if (cache.has(symbol)) {
-        res.send(cache.get(symbol));
-    } else {
-
-        const snapshots = await fetchSnapshots(symbol)
-        const options = parseSnapshots(snapshots)
-
-
-        // convert options to csv
-        const csv = await json2csv(options)
-        cache.set(symbol, csv)
-        res.send(csv)
-    }
-
-    // metrics
-    console.log(`NEW ALPACA REQUEST: ${req.ip}, ${symbol}`);
-    if (symbol) await db.ticker(symbol as string);
-    // get ip
-    if (req.ip) await db.ip(req.ip);
 }

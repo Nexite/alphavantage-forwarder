@@ -24,47 +24,51 @@ export type AlphaVantageOption = {
 }
 
 export const handleAlphaVantage = async (req: Request, res: Response) => {
+    try {
+        const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
+        const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
+        // get request params
+        const query = req.query;
 
-    const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
-    const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
-    // get request params
-    const query = req.query;
-
-    if (!query.username || !authorizedUsers.includes(query.username as string)) {
-        res.status(401).send('Unauthorized');
-        return;
-    }
-    delete query.username;
-
-    const queryParams = Object.fromEntries(Object.entries({ ...query, apikey: apiKey }).sort());
-
-    // check cache
-    const cacheKey = JSON.stringify(queryParams);
-    if (cache.has(cacheKey)) {
-        if (!queryParams.datatype || queryParams.datatype !== 'csv') res.setHeader('Content-Type', 'application/json');
-        res.send(cache.get(cacheKey));
-    } else {
-        // make request to alpha vantage
-        const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
-        // response might be csv or json but forward it
-        if (response.headers.get('content-type') === 'application/json') {
-            const data = await response.json();
-            // update cache
-            cache.set(cacheKey, JSON.stringify(data));
-
-            // set json header
-            res.setHeader('Content-Type', 'application/json');
-            res.send(data);
-        } else {
-            const data = await response.text();
-            cache.set(cacheKey, data)
-            res.send(data);
+        if (!query.username || !authorizedUsers.includes(query.username as string)) {
+            res.status(401).send('Unauthorized');
+            return;
         }
-    }
+        delete query.username;
 
-    console.log(`NEW ALPHAVANTAGE REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
-    // metrics
-    if (query.symbol) await db.ticker(query.symbol as string);
-    // get ip
-    if (req.ip) await db.ip(req.ip);
+        const queryParams = Object.fromEntries(Object.entries({ ...query, apikey: apiKey }).sort());
+
+        // check cache
+        const cacheKey = JSON.stringify(queryParams);
+        if (cache.has(cacheKey)) {
+            if (!queryParams.datatype || queryParams.datatype !== 'csv') res.setHeader('Content-Type', 'application/json');
+            res.send(cache.get(cacheKey));
+        } else {
+            // make request to alpha vantage
+            const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
+            // response might be csv or json but forward it
+            if (response.headers.get('content-type') === 'application/json') {
+                const data = await response.json();
+                // update cache
+                cache.set(cacheKey, JSON.stringify(data));
+
+                // set json header
+                res.setHeader('Content-Type', 'application/json');
+                res.send(data);
+            } else {
+                const data = await response.text();
+                cache.set(cacheKey, data)
+                res.send(data);
+            }
+        }
+
+        console.log(`NEW ALPHAVANTAGE REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
+        // metrics
+        if (query.symbol) await db.ticker(query.symbol as string);
+        // get ip
+        if (req.ip) await db.ip(req.ip);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Internal Server Error');
+    }
 }
