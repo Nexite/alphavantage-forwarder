@@ -39,7 +39,7 @@ export interface LatestTrade {
     x: string
 }
 
-const cache = new TTLCache<string, string>({ max: 200, ttl: 1 * 60 * 1000 })
+const cache = new TTLCache<string, AlphaVantageOption[]>({ max: 200, ttl: 1 * 60 * 1000 })
 
 const fetchSnapshots = async (ticker: string, page: string | null = null) => {
     const params: { feed: string; limit: string; page_token?: string } = { "feed": "indicative", "limit": "1000" }
@@ -80,11 +80,11 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
         const month = date.getMonth() + 1
         const day = date.getDate()
         const year = date.getFullYear()
-        const dateString = `${month}/${day}/${year}`
+        const dateString = `${month}-${day}-${year}`
 
         const strikePrice = Number(strike) / 1000
         // convert yymmdd to mm/dd/yy
-        const expirationStr = `${expiration.slice(2, 4)}/${expiration.slice(4, 6)}/${expiration.slice(0, 2)}`
+        const expirationStr = `${expiration.slice(2, 4)}-${expiration.slice(4, 6)}-${expiration.slice(0, 2)}`
         options.push({
             contractID: symbol,
             symbol: ticker,
@@ -123,7 +123,12 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
 export const handleAlpaca = async (req: Request, res: Response) => {
     try {
 
-        const { symbol, username } = req.query
+        const { symbol, username, datatype, function: func } = req.query
+        if (func && func !== "REALTIME_OPTIONS") {
+            res.status(400).json({ error: "Invalid function, only REALTIME_OPTIONS is supported" })
+            return
+        }
+
         if (!username || !authorizedUsers.includes(username as string)) {
             res.status(401).send('Unauthorized');
             return;
@@ -135,19 +140,30 @@ export const handleAlpaca = async (req: Request, res: Response) => {
         }
 
         // check if ticker is in cache
+        // if (cache.has(`${symbol}`)) {
+        //     res.send(cache.get(`${symbol}`));
+        // } else {
+        let options: AlphaVantageOption[] = []
         if (cache.has(symbol)) {
-            res.send(cache.get(symbol));
+            options = cache.get(symbol)!
         } else {
-
             const snapshots = await fetchSnapshots(symbol)
-            const options = parseSnapshots(snapshots)
+            options = parseSnapshots(snapshots)
+            cache.set(symbol, options)
+        }
 
-
+        if (!datatype || datatype === 'json') {
+            res.setHeader('Content-Type', 'application/json');
+            res.send(JSON.stringify({ "endpoint": "Realtime Options", "message": "success", "data": options }));
+            return
+        } else {
             // convert options to csv
             const csv = await json2csv(options)
-            cache.set(symbol, csv)
+            // cache.set(`${symbol}`, csv)
             res.send(csv)
         }
+
+        // }
 
         // metrics
         console.log(`NEW ALPACA REQUEST: ${req.ip}, ${symbol}`);
