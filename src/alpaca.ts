@@ -86,7 +86,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
         const strikePrice = Number(strike) / 1000
         // convert yymmdd to mm/dd/yy
         // const expirationStr = `${expiration.slice(2, 4)}-${expiration.slice(4, 6)}-${expiration.slice(0, 2)}`
-        const expirationStr = `20${expiration.slice(0, 2)}-${expiration.slice(4, 6)}-${expiration.slice(2, 4)}`
+        const expirationStr = `20${expiration.slice(0, 2)}-${expiration.slice(2, 4)}-${expiration.slice(4, 6)}`
         options.push({
             contractID: symbol,
             symbol: ticker,
@@ -107,10 +107,8 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
     }
     // sort by expiration then strike then type
     options.sort((a, b) => {
-        const aExp = new Date(a.expiration)
-        const bExp = new Date(b.expiration)
-        if (aExp > bExp) return 1
-        if (aExp < bExp) return -1
+        if (a.expiration > b.expiration) return 1
+        if (a.expiration < b.expiration) return -1
         if (a.strike > b.strike) return 1
         if (a.strike < b.strike) return -1
         if (a.type > b.type) return 1
