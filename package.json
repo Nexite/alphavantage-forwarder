@@ -21,6 +21,7 @@
     "@types/node": "^18.15.11",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
+    "json-2-csv": "^5.5.6",
     "sqlite3": "^5.1.7",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
