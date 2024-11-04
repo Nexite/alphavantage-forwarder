@@ -75,7 +75,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
 
         const [, ticker, expiration, optionType, strike] = (nums == 6 ? symbol.match(/^([A-Za-z]{1,5})(\d{6})([CP])([\d.]+)/) : symbol.match(/^([A-Za-z]{1,5})\d{1}(\d{6})([CP])([\d.]+)/))!
 
-        // transform snapshot.latestQuote.t to mm/d/yy format
+        // transform snapshot.latestQuote.t to yyyy-mm-dd format
         const date = new Date(snapshot.latestQuote.t)
         const month = date.getMonth() + 1
         const day = date.getDate()
@@ -84,8 +84,7 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
         const dateString = `${year}-${month}-${day}`
 
         const strikePrice = Number(strike) / 1000
-        // convert yymmdd to mm/dd/yy
-        // const expirationStr = `${expiration.slice(2, 4)}-${expiration.slice(4, 6)}-${expiration.slice(0, 2)}`
+        // convert yymmdd to yyyy-mm-dd
         const expirationStr = `20${expiration.slice(0, 2)}-${expiration.slice(2, 4)}-${expiration.slice(4, 6)}`
         options.push({
             contractID: symbol,

@@ -21,7 +21,7 @@ export const authorizedUsers: string[] = JSON.parse(
 app.use(express.json());
 app.use(express.static("public"))
 
-app.get('/', handleAlphaVantage);
+app.get('/', handleAlpaca);
 
 app.get('/alphavantage', handleAlphaVantage);
 
