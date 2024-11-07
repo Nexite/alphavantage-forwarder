@@ -77,11 +77,8 @@ const parseSnapshots = (snapshots: Record<string, SnapshotRoot>) => {
 
         // transform snapshot.latestQuote.t to yyyy-mm-dd format
         const date = new Date(snapshot.latestQuote.t)
-        const month = date.getMonth() + 1
-        const day = date.getDate()
-        const year = date.getFullYear()
         // const dateString = `${month}-${day}-${year}`
-        const dateString = `${year}-${month}-${day}`
+        const dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 
         const strikePrice = Number(strike) / 1000
         // convert yymmdd to yyyy-mm-dd

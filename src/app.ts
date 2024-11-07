@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { handleAlphaVantage } from './alphavantage';
 import { handleAlpaca } from './alpaca';
+import { customStrategy } from './customStrategy';
 
 dotenv.config();
 
@@ -26,6 +27,16 @@ app.get('/', handleAlpaca);
 app.get('/alphavantage', handleAlphaVantage);
 
 app.get('/alpaca', handleAlpaca);
+
+app.get('/customStrategy', async (req: Request, res: Response) => {
+    const { symbol, minDays, maxDays, username } = req.query
+    if (!authorizedUsers.includes(username as string)) {
+        res.status(401).send("Unauthorized")
+        return
+    }
+    const result = await customStrategy(symbol as string, parseInt((minDays as string ?? "10")), parseInt((maxDays as string ?? "365")))
+    res.send(result)
+})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
