@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,4 +17,30 @@ model Ticker {
   name        String   @id
   timesCalled Int
   lastCall    DateTime
+}
+
+//Symbol -  char 6
+//  Date -  date
+//  Time -  time
+//  Open -  decimal 18, 4
+//  High -  decimal 18, 4
+//  Low -  decimal 18, 4
+//  Close -  decimal 18, 4
+//  Volume -  int
+model HistoricalStock {
+  id          String   @id
+  symbol      String
+  date        DateTime
+  open        Decimal
+  high        Decimal
+  low         Decimal
+  close       Decimal
+  volume      Int
+}
+
+model Quote {
+  id          String   @id
+  symbol      String
+  close       Decimal
+  lastUpdated DateTime @updatedAt
 }

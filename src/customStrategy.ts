@@ -1,4 +1,40 @@
+import { TZDate } from "@date-fns/tz";
 import { AlphaVantageOption } from "./alphavantage";
+import { getStockPrice } from "./stocks";
+import { getLastTradingDay } from "./utils";
+import { UTCDate } from "@date-fns/utc";
+
+// function getESTTradingDate(inputDate?: Date): string {
+//     const date = inputDate || new Date();
+
+//     // Get time in EST
+//     const formatter = new Intl.DateTimeFormat('en-US', {
+//         timeZone: 'America/New_York',
+//         hour: 'numeric',
+//         minute: 'numeric',
+//         hour12: false,
+//         year: 'numeric',
+//         month: '2-digit',
+//         day: '2-digit'
+//     });
+
+//     const [datePart, timePart] = formatter.format(date).split(', ');
+//     const [month, day, year] = datePart.split('/');
+//     const [hours, minutes] = timePart.split(':').map(Number);
+//     if (hours < 9 || (hours === 9 && minutes < 30)) {
+//         date.setDate(date.getDate() - 1);
+//         const prevDayFormat = new Intl.DateTimeFormat('en-US', {
+//             timeZone: 'America/New_York',
+//             year: 'numeric',
+//             month: '2-digit',
+//             day: '2-digit'
+//         });
+//         const [prevMonth, prevDay, prevYear] = prevDayFormat.format(date).split('/');
+//         return `${prevYear}-${prevMonth.padStart(2, '0')}-${prevDay.padStart(2, '0')}`;
+//     }
+
+//     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+// }
 
 export type CustomStrategyOutput = AlphaVantageOption & {
     daysToExpire: number;
@@ -7,24 +43,29 @@ export type CustomStrategyOutput = AlphaVantageOption & {
     totalReturn: number;
 }
 
-export const customStrategy = async (symbol: string, minDays: number, maxDays: number) => {
-    // get the stock data from the alphavantage api
-    const stockResponse = await fetch(`http://stocks.nikhilgarg.com/alphavantage?symbol=${symbol}&username=nikhil&function=TIME_SERIES_DAILY_ADJUSTED`);
-    const stockData = await stockResponse.json();
+export const customStrategy = async (symbol: string, minDays: number, maxDays: number, date?: string) => {
+    let optionsData: CustomStrategyOutput[]
+    date ??= getLastTradingDay()
 
-    // get the options data from the alphavantage api
-    const optionsResponse = await fetch(`http://stocks.nikhilgarg.com/alphavantage?symbol=${symbol}&username=nikhil&function=REALTIME_OPTIONS`);
-    const optionsData: CustomStrategyOutput[] = (await optionsResponse.json()).data.filter((option: { type: string; }) => {
+    const [optionsResponse, currentStockPrice]: [{ data: CustomStrategyOutput[] }, number] = await Promise.all([
+        fetch(`${process.env.API_URL}/alphavantage?symbol=${symbol}&username=nikhil&function=${!date || date === getLastTradingDay() ? 'REALTIME_OPTIONS' : 'HISTORICAL_OPTIONS'}${date ? `&date=${date}` : ''}`).then(r => r.json()),
+        getStockPrice(symbol, date)
+    ]);
+
+    console.log(`Getting ${!date || date === getLastTradingDay() ? 'realtime' : 'historical'} options`)
+    optionsData = optionsResponse.data.filter((option: { type: string; }) => {
         return option.type === "put"
     });
 
-    const currentStockPrice = stockData["Time Series (Daily)"][Object.keys(stockData["Time Series (Daily)"])[0]]["4. close"]
+    if (!currentStockPrice) {
+        throw new Error(`Unable to get stock price for date ${date}`)
+    }
 
-    const currentDate = new Date()
+    const currentDate = new UTCDate(date)
 
     optionsData.forEach((option) => {
-        // calculate days to expire
-        const expirationDate = new Date(option.expiration)
+        // calculate days to expire in EST
+        const expirationDate = new TZDate(option.expiration, 'America/New_York')
         const diffDays = Math.ceil((expirationDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
         option.daysToExpire = diffDays
 
@@ -55,9 +96,9 @@ export const customStrategy = async (symbol: string, minDays: number, maxDays: n
         })[0]
     })
 
-    const output = {75: filteredOptions[0], 80: filteredOptions[1], 85: filteredOptions[2], 90: filteredOptions[3], 95: filteredOptions[4]}
-    console.log(output)
-    
+    const output = { 75: filteredOptions[0], 80: filteredOptions[1], 85: filteredOptions[2], 90: filteredOptions[3], 95: filteredOptions[4] }
+    // console.log(output)
+
     return output
 }
 

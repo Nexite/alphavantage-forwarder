@@ -6,7 +6,6 @@ services:
     environment:
       - PORT=80
       - ALPHA_ADVANTAGE_API_KEY=${ALPHA_ADVANTAGE_API_KEY}
-      - DATABASE_URL=file:./database.sqlite
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
