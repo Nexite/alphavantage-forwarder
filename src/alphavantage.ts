@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import TTLCache from '@isaacs/ttlcache';
 import * as db from './db';
 
-const cache = new TTLCache<string, string>({ max: 200, ttl: 5 })
+const cache = new TTLCache<string, string>({ max: 200, ttl: 5 * 60 * 1000 })
 
 export type AlphaVantageOption = {
     contractID: string;
