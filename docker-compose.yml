@@ -1,12 +1,12 @@
 services:
   app:
     build: .
-    # ports:
-    #   - "80:80"
+    ports:
+      - "80:80"
     environment:
       - PORT=80
       - ALPHA_ADVANTAGE_API_KEY=${ALPHA_ADVANTAGE_API_KEY}
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
-    network_mode: host
+    network_mode: bridge
