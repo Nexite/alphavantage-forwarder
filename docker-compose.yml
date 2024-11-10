@@ -9,5 +9,4 @@ services:
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: bridge
