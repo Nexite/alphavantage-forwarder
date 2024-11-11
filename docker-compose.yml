@@ -10,3 +10,4 @@ services:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
     network_mode: bridge
+    restart: unless-stopped
