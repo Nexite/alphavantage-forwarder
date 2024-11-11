@@ -1,7 +1,7 @@
 import { TZDate } from "@date-fns/tz";
 import { AlphaVantageOption } from "./alphavantage";
 import { getHistoricalPrices, getStockOverview, getStockPrice, getStockQuote } from "./stock";
-import { fromDbToStr, getCurrentTradingDay, getLastTradingDay, isTradingDay, isTradingSession } from "./utils";
+import { fromDbToStr, fromStrToDate, getCurrentTradingDay, getLastTradingDay, isTradingDay, isTradingSession } from "./utils";
 import { UTCDate } from "@date-fns/utc";
 import { queryQueue } from './queue';
 import { getHistoricalOptionsChains, getRealtimeOptionsChain } from "./options";
@@ -99,7 +99,7 @@ export const customStrategyHistorical = async (symbol: string, days: number, min
     if (isTradingSession()) {
         const currentStockPrice = (await getStockQuote(symbol))
         const currentOptions = await getRealtimeOptionsChain(symbol)
-        historicalOptions.push({ id: `${symbol}-${getCurrentTradingDay()}`, symbol, date: new UTCDate(getCurrentTradingDay() ?? ''), options: currentOptions })
+        historicalOptions.push({ id: `${symbol}-${getCurrentTradingDay()}`, symbol, date: new UTCDate(getCurrentTradingDay() ?? ''), options: currentOptions.filter((option: any) => option.type === 'put') })
         historicalPrices.push({ date: getCurrentTradingDay() ?? '', close: currentStockPrice.close })
     }
 
