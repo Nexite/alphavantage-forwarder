@@ -50,7 +50,9 @@ export const handleAlphaVantage = async (req: Request, res: Response) => {
             if (response.headers.get('content-type') === 'application/json') {
                 const data = await response.json();
                 // update cache
-                cache.set(cacheKey, JSON.stringify(data));
+                if (!data.Information) {
+                    cache.set(cacheKey, JSON.stringify(data));
+                }
 
                 // set json header
                 res.setHeader('Content-Type', 'application/json');

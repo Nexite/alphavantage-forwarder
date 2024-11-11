@@ -37,6 +37,7 @@
     "typescript": "^5.0.4"
   },
   "devDependencies": {
+    "@prisma/extension-optimize": "^1.0.1",
     "nodemon": "^2.0.22",
     "prisma": "^5.21.1"
   }

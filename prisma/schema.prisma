@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  // previewFeatures = ["tracing"]
 }
 
 datasource db {
@@ -27,6 +28,7 @@ model Ticker {
 //  Low -  decimal 18, 4
 //  Close -  decimal 18, 4
 //  Volume -  int
+
 model HistoricalStock {
   id          String   @id
   symbol      String
@@ -36,6 +38,20 @@ model HistoricalStock {
   low         Decimal
   close       Decimal
   volume      Int
+
+  @@index([symbol, date])
+  @@index([date])
+}
+
+model HistoricalOptionsChain {
+  id          String   @id // format: "{symbol}-{date}"
+  symbol      String
+  date        DateTime
+  options     Json     // Store all options for this date as an array
+
+  @@index([symbol, date])
+  @@index([date])
+  @@index([symbol])
 }
 
 model Quote {

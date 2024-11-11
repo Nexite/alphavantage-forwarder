@@ -4,9 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import { handleAlphaVantage } from './alphavantage';
 import { handleAlpaca } from './alpaca';
-import { customStrategy } from './customStrategy';
-import { getStockPrice, updateAllStockPrices } from './stocks';
-import { getLastTradingDay, isTradingDay, isTradingSession } from './utils';
+import { customStrategy, customStrategyHistorical } from './customStrategy';
+import { getLastTradingDay, isTradingDay } from './utils';
+import { getHistoricalOptionsChains } from './options';
+import { getHistoricalPrices } from './stock';
+import { updateAllThings } from './update';
 
 dotenv.config();
 
@@ -34,12 +36,15 @@ app.get('/customStrategy', async (req: Request, res: Response) => {
     res.status(401).send("Unauthorized")
     return
   }
+  let lastTradingDate = date
+
   if (date && !isTradingDay(date as string)) {
-    res.status(400).send("Not a valid trading day")
-    return
+    lastTradingDate = getLastTradingDay(false, date as string)
+    // res.status(400).send("Not a valid trading day")
+    // return
   }
   try {
-    const result = await customStrategy(symbol as string, parseInt((minDays as string ?? "10")), parseInt((maxDays as string ?? "365")), date as string)
+    const result = await customStrategy(symbol as string, parseInt((minDays as string ?? "10")), parseInt((maxDays as string ?? "365")), lastTradingDate as string)
     res.send(result)
   } catch (error) {
     console.log(error)
@@ -47,28 +52,38 @@ app.get('/customStrategy', async (req: Request, res: Response) => {
   }
 })
 
-app.get('/stockPrice', async (req: Request, res: Response) => {
-  const { symbol, date } = req.query
-  // date in format YYYY-MM-DD, if it is in the future, return null
-  console.log(new Date(date as string), new Date())
-  if (new Date(date as string) > new Date()) {
-    res.send(null)
-    return
+app.get('/historicalOptions', async (req: Request, res: Response) => {
+  const { symbol, days } = req.query
+  // const options = await getHistoricalOptionsChain(symbol as string, date as string)
+  const options = await getHistoricalOptionsChains(symbol as string, parseInt(days as string))
+  res.send(options)
+})
+
+app.get('/historicalPrices', async (req: Request, res: Response) => {
+  const { symbol, days } = req.query
+  const prices = await getHistoricalPrices(symbol as string, parseInt(days as string))
+  res.send(prices)
+})
+
+app.get('/customStrategyHistorical', async (req: Request, res: Response) => {
+  try {
+    const { symbol, days, minDays, maxDays } = req.query
+    const result = await customStrategyHistorical(symbol as string, parseInt(days as string) || 30, parseInt(minDays as string) || 10, parseInt(maxDays as string) || 365)
+    res.send(result)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send({ error: error })
   }
-
-  const stock = await getStockPrice(symbol as string, date as string)
-  res.send({price: stock})
 })
 
-app.get('/lastTradingDay', async (req: Request, res: Response) => {
-  const lastTradingDay = getLastTradingDay()
-  console.log(isTradingSession())
-  res.send(lastTradingDay)
-})
-
-app.get('/test', async (req: Request, res: Response) => {
-  await updateAllStockPrices()
-  res.send("done")
+app.get('/update', async (req: Request, res: Response ) => {
+  try {
+    await updateAllThings()
+    res.send("Updated")
+  } catch (error) {
+    console.log(error)
+    res.status(500).send({ error: error })
+  }
 })
 
 app.listen(port, () => {

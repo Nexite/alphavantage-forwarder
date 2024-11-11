@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-export const dbClient = new PrismaClient();
+
+export const dbClient = new PrismaClient()
 
 export const ticker = async (ticker: string) => {
     // await dbClient.ticker.upsert({

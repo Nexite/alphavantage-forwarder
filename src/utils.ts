@@ -1,4 +1,4 @@
-import { format, subDays } from 'date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { UTCDate } from '@date-fns/utc';
 
@@ -76,8 +76,8 @@ export const isTradingDay = (date: string) => {
     return !isWeekend && !holiday;
 }
 
-export const getLastTradingDay = (includeToday: boolean = true) => {
-    let date = new TZDate(new Date(), 'America/New_York');
+export const getLastTradingDay = (includeToday: boolean = true, startDate?: string) => {
+    let date = new TZDate(startDate ? new UTCDate(startDate) : new Date(), 'America/New_York');
     if (isTradingSession()) {
         if (includeToday) return format(date, 'yyyy-MM-dd');
         date = new TZDate(subDays(date, 1), 'America/New_York');
@@ -97,4 +97,52 @@ export const getLastTradingDay = (includeToday: boolean = true) => {
 export const getCurrentTradingDay = () => {
     const date = new TZDate(new Date(), 'America/New_York');
     return isTradingSession() ? format(date, 'yyyy-MM-dd') : null;
+}
+
+export const generateDateRange = (startDate: Date, days: number): string[] => {
+    return Array.from({ length: days }, (_, i) => {
+        const date = subDays(startDate, i);
+        return format(date, 'yyyy-MM-dd');
+    }).sort();
+}
+
+export const fromDbToStr = (date: Date): string => {
+    return format(new UTCDate(date), 'yyyy-MM-dd');
+};
+
+export const fromStrToDate = (dateStr: string): Date => {
+    return new UTCDate(parseISO(dateStr));
+};
+
+// Add these functions to utils.ts
+export function isWeekend(date: Date): boolean {
+    const day = date.getDay();
+    return day === 0 || day === 6; // Sunday or Saturday
+}
+
+export function getValidTradingDates(startDate: Date, endDate: Date): string[] {
+    const dates: string[] = [];
+    let currentDate = new UTCDate(startDate);
+
+    while (currentDate <= endDate) {
+        const dateStr = fromDbToStr(currentDate);
+        if (!isWeekend(currentDate)) {
+            dates.push(dateStr);
+        }
+        // Increment by one day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dates.sort();
+}
+
+export function chunk<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+}
+
+export const scheduleEOD = (taskFn: () => Promise<void>) => {
+    scheduleEOD(taskFn);
 }
