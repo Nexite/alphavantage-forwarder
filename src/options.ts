@@ -174,7 +174,6 @@ export const getHistoricalOptionsChains = async (symbol: string, days: number): 
 
     // Get all valid trading dates (excluding weekends)
     const validTradingDates = getValidTradingDates(startDate, lastDateObj);
-    
     // First get existing chains
     const existingChains = await dbClient.$queryRaw<HistoricalOptionsChainResult[]>`
         SELECT * 

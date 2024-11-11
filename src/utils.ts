@@ -58,9 +58,8 @@ export const isTradingSession = () => {
         if (holiday.type === 'earlyClose') return tzDate.getHours() < 13 && (tzDate.getHours() > 9 || (tzDate.getHours() === 9 && tzDate.getMinutes() >= 30));
     }
     // 9:30am - 4:00pm
-    const isTradingHours =
-        tzDate.getHours() > 9 ||
-        (tzDate.getHours() === 9 && tzDate.getMinutes() >= 30) &&
+    const isTradingHours = (tzDate.getHours() > 9 ||
+        (tzDate.getHours() === 9 && tzDate.getMinutes() >= 30)) &&
         (tzDate.getHours() < 16 || (tzDate.getHours() === 16 && tzDate.getMinutes() === 0));
 
     return !isWeekend && isTradingHours;

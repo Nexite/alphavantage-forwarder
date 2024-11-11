@@ -82,6 +82,7 @@ export const customStrategy = async (symbol: string, minDays: number, maxDays: n
 
 
 export const customStrategyHistorical = async (symbol: string, days: number, minDays: number, maxDays: number) => {
+    console.log(`Getting historical options for ${symbol}`)
     const [historicalOptions, historicalPrices, stockOverview] = await Promise.all([
         getHistoricalOptionsChains(symbol, days),
         getHistoricalPrices(symbol, days),
@@ -142,7 +143,7 @@ export const customStrategyHistorical = async (symbol: string, days: number, min
         };
             optionsAnalysis.push({ date: historicalPrices[index].date, options, close: price })
         } catch (e) {
-            console.log(`Error processing options for date ${historicalPrices}: ${e}`)
+            console.log(`Error processing options for date ${historicalPrices[index].date}: ${e}`)
         }
     }
     return { options: optionsAnalysis, "52high": stockOverview["52WeekHigh"], "52low": stockOverview["52WeekLow"] }
