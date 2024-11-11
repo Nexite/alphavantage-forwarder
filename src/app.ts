@@ -9,6 +9,7 @@ import { getLastTradingDay, isTradingDay } from './utils';
 import { getHistoricalOptionsChains } from './options';
 import { getHistoricalPrices } from './stock';
 import { updateAllThings } from './update';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -23,6 +24,14 @@ export const authorizedUsers: string[] = JSON.parse(
 
 app.use(express.json());
 app.use(express.static("public"))
+
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://options.nikhilgarg.com'
+  ]
+}));
 
 app.get('/', handleAlpaca);
 
