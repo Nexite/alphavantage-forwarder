@@ -29,24 +29,24 @@ model Ticker {
 //  Volume -  int
 
 model HistoricalStock {
-  id          String   @id
-  symbol      String
-  date        DateTime
-  open        Decimal
-  high        Decimal
-  low         Decimal
-  close       Decimal
-  volume      Int
+  id     String   @id
+  symbol String
+  date   DateTime
+  open   Decimal
+  high   Decimal
+  low    Decimal
+  close  Decimal
+  volume Int
 
   @@index([symbol, date])
   @@index([date])
 }
 
 model HistoricalOptionsChain {
-  id          String   @id // format: "{symbol}-{date}"
-  symbol      String
-  date        DateTime
-  options     Json     // Store all options for this date as an array
+  id      String   @id // format: "{symbol}-{date}"
+  symbol  String
+  date    DateTime
+  options Json // Store all options for this date as an array
 
   @@index([symbol, date])
   @@index([date])
@@ -58,4 +58,89 @@ model Quote {
   symbol      String
   close       Decimal
   lastUpdated DateTime @updatedAt
+}
+
+//{
+//     "contractID": "AAPL241108C00100000",
+//     "symbol": "AAPL",
+//     "expiration": "2024-11-08",
+//     "strike": "100.00",
+//     "type": "call",
+//     "last": "121.81",
+//     "mark": "127.05",
+//     "bid": "125.35",
+//     "bid_size": "58",
+//     "ask": "128.75",
+//     "ask_size": "58",
+//     "volume": "0",
+//     "open_interest": "0",
+//     "date": "2024-11-08",
+//     "implied_volatility": "6.09575",
+//     "delta": "0.99682",
+//     "gamma": "0.00013",
+//     "theta": "-1.32188",
+//     "vega": "0.00115",
+//     "rho": "0.00272"
+// },
+
+model Symbol {
+  id              String            @id // e.g., "AAPL"
+  dailyQuotes     DailyQuote[]
+  dailyOptions    DailyOptionsChain[]
+  dailyContracts  DailyOptionContract[]
+}
+
+model DailyQuote {
+  id          String      @id
+  symbol      Symbol      @relation(fields: [symbolId], references: [id])
+  symbolId    String
+  price       Decimal
+  date        DateTime
+  
+  @@unique([symbolId, date])
+  @@index([date])
+}
+
+model DailyOptionsChain {
+  id              String                 @id // format: "{symbolId}-{date}"
+  symbol          Symbol                 @relation(fields: [symbolId], references: [id])
+  symbolId        String
+  date            DateTime
+  contracts       DailyOptionContract[]
+
+  @@unique([symbolId, date])
+  @@index([date])
+}
+
+model DailyOptionContract {
+  id                 String             @id // The contractID from your example
+  symbol            Symbol             @relation(fields: [symbolId], references: [id])
+  symbolId          String
+  chain             DailyOptionsChain  @relation(fields: [chainId], references: [id])
+  chainId           String
+  expiration        DateTime
+  strike            Decimal
+  type              OptionType
+  last              Decimal?
+  mark              Decimal?
+  bid               Decimal?
+  bidSize           Int?
+  ask               Decimal?
+  askSize           Int?
+  volume            Int?
+  openInterest      Int?
+  impliedVolatility Decimal?
+  delta             Decimal?
+  gamma             Decimal?
+  theta             Decimal?
+  vega              Decimal?
+  rho               Decimal?
+
+  @@index([symbolId, expiration])
+  @@index([chainId])
+}
+
+enum OptionType {
+  CALL
+  PUT
 }
