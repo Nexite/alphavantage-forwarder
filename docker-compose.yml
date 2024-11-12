@@ -10,7 +10,7 @@ services:
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
-      - ./key.pem:/app/key.pem:ro
-      - ./cert.pem:/app/cert.pem:ro
+      - /etc/letsencrypt/live/stocks.nikhilgarg.com/fullchain.pem:/app/cert.pem:ro
+      - /etc/letsencrypt/live/stocks.nikhilgarg.com/privkey.pem:/app/key.pem:ro
     network_mode: bridge
     restart: unless-stopped

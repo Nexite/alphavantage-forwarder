@@ -17,8 +17,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-const privateKey = fs.readFileSync( 'key.pem' );
-const publicKey = fs.readFileSync( 'cert.pem' );
+// Update the certificate paths if needed
+const privateKey = fs.readFileSync('key.pem');
+const publicKey = fs.readFileSync('cert.pem');
 
 export const authorizedUsers: string[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
@@ -38,7 +39,8 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://options.nikhilgarg.com'
+    'https://options.nikhilgarg.com',
+    'https://stocks.nikhilgarg.com'
   ]
 }));
 
