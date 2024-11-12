@@ -23,7 +23,7 @@ const updateQuotesForSymbol = async (symbol: string, datesToReturn: string[]) =>
             id: `${symbol}-${date}`,
             symbolId: symbol,
             date: dateObj,
-            price: quote['5. adjusted close']
+            price: new Prisma.Decimal(quote['5. adjusted close'])
         })
     })
     await dbClient.dailyQuote.createMany({ data: entriesToCreate, skipDuplicates: true })
@@ -35,20 +35,20 @@ export const getHistoricalQuoteRange = async (symbol: string, days: number, skip
     await symbolManager.ensureSymbol(symbol)
 
     // get day {days} ago
-    const startDate = getDaysAgo(days + skip, true)
+    const startDate = getDaysAgo(days + skip)
     startDate.setHours(0, 0, 0, 0)
-    const endDate = skip > 0 ? getDaysAgo(skip, true) : new UTCDate()
+    const endDate = skip > 0 ? getDaysAgo(skip + 1, false) : new UTCDate()
     endDate.setHours(0, 0, 0, 0)
-    const tradingDates = await getValidTradingDates(startDate, endDate)
-    const startDateUTC = new Date(startDate.toISOString());
-    const endDateUTC = new Date(endDate.toISOString());
+    console.log(endDate, skip)
 
+    const tradingDates = await getValidTradingDates(startDate, endDate)
+    
     const quotes = await dbClient.dailyQuote.findMany({
         where: {
             symbolId: symbol,
             date: {
-                gte: startDateUTC,
-                lte: endDateUTC
+                gte: startDate,
+                lte: endDate
             }
         },
         select: {
@@ -56,11 +56,15 @@ export const getHistoricalQuoteRange = async (symbol: string, days: number, skip
             price: true
         }
     })
-    const existingDates = new Set(quotes.map(q => fromDbToStr(q.date)));
-    
-    const missingDates = tradingDates.filter(date => !existingDates.has(date));
-    const missingQuotes = missingDates.length > 0 ? await updateQuotesForSymbol(symbol, missingDates) : []
 
-    quotes.push(...missingQuotes)
+    const existingDates = new Set(quotes.map(q => fromDbToStr(q.date)));
+    const missingDates = tradingDates.filter(date => !existingDates.has(date));
+
+    const missingQuotes = missingDates.length > 0 ? await updateQuotesForSymbol(symbol, missingDates) : []
+    quotes.push(...(missingQuotes.map(q => ({
+        date: q.date,
+        price: q.price
+    }))))
+    
     return quotes
 }

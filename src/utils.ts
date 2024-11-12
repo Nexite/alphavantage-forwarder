@@ -2,17 +2,15 @@ import { format, subDays, parseISO } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { UTCDate } from '@date-fns/utc';
 import { Holiday } from '@prisma/client';
-import { dbClient, getHolidays } from './db';
+import { dbClient, getClosedHolidays, getHolidays } from './db';
 
 // returns true if the date is a holiday that is closed or if it is a weekend, date in yyyy-MM-dd format
 const isClosed = (date: Date) => {
-    const holidays = getHolidays();
-    const holiday = holidays.find(holiday => holiday.id === format(date, 'yyyy-MM-dd'));
-    return (holiday && holiday.type === 'CLOSED') || date.getDay() === 0 || date.getDay() === 6;
+    const holiday = getClosedHolidays().has(format(date, 'yyyy-MM-dd'));
+    return holiday || date.getDay() === 0 || date.getDay() === 6;
 }
 const isHoliday = (date: Date) => {
-    const holidays = getHolidays();
-    return holidays.find(holiday => holiday.id === format(date, 'yyyy-MM-dd'));
+    return getClosedHolidays().has(format(date, 'yyyy-MM-dd'));
 }
 
 export const isTradingSession = () => {
@@ -20,7 +18,7 @@ export const isTradingSession = () => {
     const tzDate = new TZDate(new Date(), 'America/New_York');
     const isWeekend = tzDate.getDay() === 0 || tzDate.getDay() === 6;
 
-    const holiday = holidays.find(holiday => holiday.id === format(tzDate, 'yyyy-MM-dd'));
+    const holiday = holidays.get(format(tzDate, 'yyyy-MM-dd'));
     if (holiday) {
         if (holiday.type === 'CLOSED') return false;
         if (holiday.type === 'EARLY_CLOSE') return tzDate.getHours() < 13 && (tzDate.getHours() > 9 || (tzDate.getHours() === 9 && tzDate.getMinutes() >= 30));
@@ -35,12 +33,12 @@ export const isTradingSession = () => {
 
 
 export const isTradingDay = (date: string) => {
-    const holidays = getHolidays();
+    const holidays = getClosedHolidays();
     // date in yyyy-MM-dd format
     const tzDate = new UTCDate(date);
     const isWeekend = tzDate.getDay() === 0 || tzDate.getDay() === 6;
 
-    const holiday = holidays.find(holiday => holiday.id === format(tzDate, 'yyyy-MM-dd'));
+    const holiday = holidays.has(format(tzDate, 'yyyy-MM-dd'));
     return !isWeekend && !holiday;
 }
 
@@ -89,7 +87,6 @@ export function isWeekend(date: Date): boolean {
 }
 
 export function getValidTradingDates(startDate: Date, endDate: Date): string[] {
-    const holidays = getHolidays();
     const dates: string[] = [];
     let currentDate = new UTCDate(startDate);
 

@@ -7,6 +7,7 @@ import { handleAlpaca } from './alpaca';
 import cors from 'cors';
 import { getHistoricalQuoteRange } from './quotes';
 import { initializeDb } from './db';
+import { alphaVantageQueue } from './queue';
 
 dotenv.config();
 
@@ -44,6 +45,10 @@ async function startServer() {
       const skip = parseInt(req.query.skip as string) || 0;
       const quotes = await getHistoricalQuoteRange(symbol, days, skip);
       res.json(quotes);
+    });
+
+    app.get('/queue-status', (req, res) => {
+      res.json(alphaVantageQueue.stats);
     });
 
     app.listen(port, () => {

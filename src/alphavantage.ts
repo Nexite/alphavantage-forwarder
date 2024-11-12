@@ -2,6 +2,7 @@ import { authorizedUsers } from "./app";
 import { Request, Response } from 'express';
 import TTLCache from '@isaacs/ttlcache';
 import * as db from './db';
+import { alphaVantageQueue } from './queue';
 
 const cache = new TTLCache<string, string>({ max: 200, ttl: 5 * 60 * 1000 })
 
@@ -81,9 +82,7 @@ type AlphaVantageQuery = {
     function: string;
 } & Record<string, string>
 
-export const requestAlphaVantage = async (query: AlphaVantageQuery) => {
-    const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
-    const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
-    const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams({ ...query, apikey: apiKey } as Record<string, string>)}`);
-    return response.json()
+export const requestAlphaVantage = async (query: AlphaVantageQuery, priority?: number) => {
+    console.log(`Queuing AlphaVantage request: ${query.function}, ${query.symbol || ''}, priority: ${priority || 10}`)
+    return await alphaVantageQueue.addToQueue(query, priority);
 }
