@@ -66,11 +66,24 @@ export const handleAlphaVantage = async (req: Request, res: Response) => {
 
         console.log(`NEW ALPHAVANTAGE REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
         // metrics
-        if (query.symbol) await db.ticker(query.symbol as string);
-        // get ip
-        if (req.ip) await db.ip(req.ip);
+        // if (query.symbol) await db.ticker(query.symbol as string);
+        // // get ip
+        // if (req.ip) await db.ip(req.ip);
     } catch (error) {
         console.error(error);
         res.status(500).send('Internal Server Error');
     }
+}
+
+
+
+type AlphaVantageQuery = {
+    function: string;
+} & Record<string, string>
+
+export const requestAlphaVantage = async (query: AlphaVantageQuery) => {
+    const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
+    const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
+    const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams({ ...query, apikey: apiKey } as Record<string, string>)}`);
+    return response.json()
 }

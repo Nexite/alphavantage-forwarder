@@ -163,9 +163,9 @@ export const handleAlpaca = async (req: Request, res: Response) => {
 
         // metrics
         console.log(`NEW ALPACA REQUEST: ${req.ip}, ${symbol}`);
-        if (symbol) await db.ticker(symbol as string);
-        // get ip
-        if (req.ip) await db.ip(req.ip);
+        // if (symbol) await db.ticker(symbol as string);
+        // // get ip
+        // if (req.ip) await db.ip(req.ip);
     }
     catch (e) {
         console.error(e)
