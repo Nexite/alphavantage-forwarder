@@ -10,17 +10,26 @@ import { getHistoricalOptionsChains } from './options';
 import { getHistoricalPrices } from './stock';
 import { updateAllThings } from './update';
 import cors from 'cors';
+import https from 'https';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+const privateKey = fs.readFileSync( 'key.pem' );
+const publicKey = fs.readFileSync( 'cert.pem' );
 
 export const authorizedUsers: string[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
 );
 
+app.use((req, res, next) => {
+    if (!req.secure) {
+        return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+    next();
+});
 
 app.use(express.json());
 app.use(express.static("public"))
@@ -95,6 +104,18 @@ app.get('/update', async (req: Request, res: Response ) => {
   }
 })
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+// Create HTTPS server
+const httpsServer = https.createServer({
+    key: privateKey,
+    cert: publicKey
+}, app);
+
+// Listen on HTTPS port (usually 443)
+httpsServer.listen(443, () => {
+    console.log('HTTPS Server running on port 443');
+});
+
+// Optionally keep HTTP server on port 80 to redirect to HTTPS
+app.listen(80, () => {
+    console.log('HTTP Server running on port 80');
 });

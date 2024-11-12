@@ -3,11 +3,14 @@ services:
     build: .
     ports:
       - "80:80"
+      - "443:443"
     environment:
       - PORT=80
       - ALPHA_ADVANTAGE_API_KEY=${ALPHA_ADVANTAGE_API_KEY}
     volumes:
       - ./authorized_users.json:/app/authorized_users.json:ro
       - ./prisma/:/app/prisma/:rw
+      - ./key.pem:/app/key.pem:ro
+      - ./cert.pem:/app/cert.pem:ro
     network_mode: bridge
     restart: unless-stopped
