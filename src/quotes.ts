@@ -60,6 +60,17 @@ export const getHistoricalQuoteRange = async (symbol: string, days: number, skip
     const existingDates = new Set(quotes.map(q => fromDbToStr(q.date)));
     const missingDates = tradingDates.filter(date => !existingDates.has(date));
 
+    // if (missingDates.length > 0) {
+    //     console.log('creating holiday entry for ', missingDates.length)
+    //     await dbClient.holiday.createMany({
+    //         data: missingDates.map(date => ({
+    //             id: `${date}`,
+    //             date: fromStrToDate(date),
+    //             type: 'CLOSED'
+    //         }))
+    //     })
+    // }
+
     const missingQuotes = missingDates.length > 0 ? await updateQuotesForSymbol(symbol, missingDates) : []
     quotes.push(...(missingQuotes.map(q => ({
         date: q.date,

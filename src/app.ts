@@ -8,6 +8,7 @@ import cors from 'cors';
 import { getHistoricalQuoteRange } from './quotes';
 import { initializeDb } from './db';
 import { alphaVantageQueue } from './queue';
+import { getHistoricalOptionsRange } from './options';
 
 dotenv.config();
 
@@ -45,6 +46,14 @@ async function startServer() {
       const skip = parseInt(req.query.skip as string) || 0;
       const quotes = await getHistoricalQuoteRange(symbol, days, skip);
       res.json(quotes);
+    });
+
+    app.get('/historicalOptions', async (req: Request, res: Response) => {
+      const symbol = req.query.symbol as string;
+      const days = parseInt(req.query.days as string);
+      const skip = parseInt(req.query.skip as string) || 0;
+      const options = await getHistoricalOptionsRange(symbol, days, skip);
+      res.json(options);
     });
 
     app.get('/queue-status', (req, res) => {

@@ -19,7 +19,7 @@ model DailyQuote {
   symbol      Symbol      @relation(fields: [symbolId], references: [id])
   symbolId    String
   price       Decimal
-  date        DateTime
+  date        DateTime    @db.Date
   
   @@unique([symbolId, date])
   @@index([date])
@@ -27,42 +27,45 @@ model DailyQuote {
 }
 
 model DailyOptionsChain {
-  id              String                 @id // format: "{symbolId}-{date}"
+  // id              String                 @id // format: "{symbolId}-{date}"
   symbol          Symbol                 @relation(fields: [symbolId], references: [id])
   symbolId        String
-  date            DateTime
+  date            DateTime             @db.Date
   contracts       DailyOptionContract[]
 
   @@unique([symbolId, date])
+  @@id([symbolId, date])
   @@index([date])
 }
 
 model DailyOptionContract {
-  id                 String             @id // The contractID from your example
+  // id                 String             @id // format: "{contractID}-{date}"
+  contractId         String
+  date               DateTime          @db.Date
   symbol            Symbol             @relation(fields: [symbolId], references: [id])
-  symbolId          String
-  chain             DailyOptionsChain  @relation(fields: [chainId], references: [id])
-  chainId           String
-  expiration        DateTime
+  symbolId          String             
+  chain             DailyOptionsChain  @relation(fields: [symbolId, date], references: [symbolId, date])
+  expiration        DateTime          @db.Date
   strike            Decimal
   type              OptionType
-  last              Decimal?
-  mark              Decimal?
+  // last              Decimal?
+  // mark              Decimal?
   bid               Decimal?
-  bidSize           Int?
+  // bidSize           Int?
   ask               Decimal?
-  askSize           Int?
-  volume            Int?
-  openInterest      Int?
-  impliedVolatility Decimal?
+  // askSize           Int?
+  // volume            Int?
+  // openInterest      Int?
+  // impliedVolatility Decimal?
   delta             Decimal?
   gamma             Decimal?
   theta             Decimal?
   vega              Decimal?
   rho               Decimal?
 
+  @@id([contractId, date])
   @@index([symbolId, expiration])
-  @@index([chainId])
+  @@index([symbolId, date, type, expiration])
 }
 
 enum OptionType {
@@ -73,7 +76,7 @@ enum OptionType {
 
 model Holiday {
   id          String      @id // format: "{yyyy}-{MM}-{dd}"
-  date        DateTime
+  date        DateTime    @db.Date
   type        HolidayType
 }
 
