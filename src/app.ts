@@ -53,6 +53,10 @@ async function startServer() {
     app.get('/historicalQuotes', async (req: Request, res: Response) => {
       try {
         const symbol = req.query.symbol as string;
+        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
+        if (!/^[A-Za-z]+$/.test(symbol)) {
+          return res.status(400).json({ error: 'Invalid symbol' });
+        }
         const days = parseInt(req.query.days as string);
         const skip = parseInt(req.query.skip as string) || 0;
         console.log('historicalQuotes', symbol, days, skip)
@@ -67,6 +71,10 @@ async function startServer() {
     app.get('/historicalOptions', async (req: Request, res: Response) => {
       try {
         const symbol = req.query.symbol as string;
+        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
+        if (!/^[A-Za-z]+$/.test(symbol)) {
+          return res.status(400).json({ error: 'Invalid symbol' });
+        }
         const days = parseInt(req.query.days as string);
         const skip = parseInt(req.query.skip as string) || 0;
         console.log('historicalOptions', symbol, days, skip)
@@ -89,6 +97,10 @@ async function startServer() {
     app.get('/overview', async (req, res) => {
       try {
         const symbol = req.query.symbol as string;
+        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
+        if (!/^[A-Za-z]+$/.test(symbol)) {
+          return res.status(400).json({ error: 'Invalid symbol' });
+        }
         const cachedResult = overviewCache.get(symbol);
         if (cachedResult) {
           res.json(cachedResult);
