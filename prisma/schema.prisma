@@ -11,35 +11,35 @@ model Symbol {
   id              String            @id // e.g., "AAPL"
   dailyQuotes     DailyQuote[]
   dailyOptions    DailyOptionsChain[]
-  dailyContracts  DailyOptionContract[]
+  calls           DailyOptionCall[]
+  puts            DailyOptionPut[]
 }
 
 model DailyQuote {
-  id          String      @id // format: "{symbolId}-{date}"
   symbol      Symbol      @relation(fields: [symbolId], references: [id])
   symbolId    String
   price       Decimal
   date        DateTime    @db.Date
   
-  @@unique([symbolId, date])
+  @@id([symbolId, date])
   @@index([date])
   @@index([symbolId, date])
 }
 
 model DailyOptionsChain {
-  // id              String                 @id // format: "{symbolId}-{date}"
   symbol          Symbol                 @relation(fields: [symbolId], references: [id])
   symbolId        String
   date            DateTime             @db.Date
-  contracts       DailyOptionContract[]
+  calls           DailyOptionCall[]
+  puts            DailyOptionPut[]
 
   @@unique([symbolId, date])
   @@id([symbolId, date])
   @@index([date])
+  @@index([symbolId, date])
 }
 
-model DailyOptionContract {
-  // id                 String             @id // format: "{contractID}-{date}"
+model DailyOptionPut {
   contractId         String
   date               DateTime          @db.Date
   symbol            Symbol             @relation(fields: [symbolId], references: [id])
@@ -47,31 +47,59 @@ model DailyOptionContract {
   chain             DailyOptionsChain  @relation(fields: [symbolId, date], references: [symbolId, date])
   expiration        DateTime          @db.Date
   strike            Decimal
-  type              OptionType
-  // last              Decimal?
-  // mark              Decimal?
-  bid               Decimal?
-  // bidSize           Int?
-  ask               Decimal?
-  // askSize           Int?
-  // volume            Int?
-  // openInterest      Int?
-  // impliedVolatility Decimal?
-  delta             Decimal?
-  gamma             Decimal?
-  theta             Decimal?
-  vega              Decimal?
-  rho               Decimal?
+  last              Decimal
+  mark              Decimal
+  bid               Decimal
+  bidSize           Int
+  ask               Decimal
+  askSize           Int
+  volume            Int
+  openInterest      Int
+  impliedVolatility Decimal
+  delta             Decimal
+  gamma             Decimal
+  theta             Decimal
+  vega              Decimal
+  rho               Decimal
 
   @@id([contractId, date])
   @@index([symbolId, expiration])
-  @@index([symbolId, date, type, expiration])
+  @@index([date, symbolId])
+  @@index([contractId, symbolId, date])
 }
 
-enum OptionType {
-  CALL
-  PUT
+model DailyOptionCall {
+  contractId         String
+  date               DateTime          @db.Date
+  symbol            Symbol             @relation(fields: [symbolId], references: [id])
+  symbolId          String             
+  chain             DailyOptionsChain  @relation(fields: [symbolId, date], references: [symbolId, date])
+  expiration        DateTime          @db.Date
+  strike            Decimal
+  last              Decimal
+  mark              Decimal
+  bid               Decimal
+  bidSize           Int
+  ask               Decimal
+  askSize           Int
+  volume            Int
+  openInterest      Int
+  impliedVolatility Decimal
+  delta             Decimal
+  gamma             Decimal
+  theta             Decimal
+  vega              Decimal
+  rho               Decimal
+  @@id([contractId, date])
+  @@index([symbolId, expiration])
+  @@index([date, symbolId])
+  @@index([contractId, symbolId, date])
 }
+
+// enum OptionType {
+//   CALL
+//   PUT
+// }
 
 
 model Holiday {

@@ -1,11 +1,10 @@
 import { format, subDays, parseISO } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { UTCDate } from '@date-fns/utc';
-import { Holiday } from '@prisma/client';
-import { dbClient, getClosedHolidays, getHolidays } from './db';
+import { getClosedHolidays, getHolidays } from './db';
 
 // returns true if the date is a holiday that is closed or if it is a weekend, date in yyyy-MM-dd format
-const isClosed = (date: Date) => {
+export const isClosed = (date: Date) => {
     const holiday = getClosedHolidays().has(format(date, 'yyyy-MM-dd'));
     return holiday || date.getDay() === 0 || date.getDay() === 6;
 }
@@ -43,20 +42,31 @@ export const isTradingDay = (date: string) => {
 }
 
 export const getLastTradingDay = (includeToday: boolean = true, startDate?: string) => {
+    // Initialize date in NY timezone, using provided startDate or current date
     let date = new TZDate(startDate ? new UTCDate(startDate) : new Date(), 'America/New_York');
+
+    // If we're currently in a trading session
     if (isTradingSession()) {
+        // Return today's date if includeToday is true
         if (includeToday) return format(date, 'yyyy-MM-dd');
+        // Otherwise move to previous day
         date = new TZDate(subDays(date, 1), 'America/New_York');
     }
 
+    // If before market open (9:30 AM), move to previous day
     if (date.getHours() < 9 || (date.getHours() === 9 && date.getMinutes() < 30)) {
+        // console.log('before market open')
         date = new TZDate(subDays(date, 1), 'America/New_York');
     }
 
+    // Keep moving back days until we find a non-closed trading day
+    // (not a weekend or holiday)
     while (isClosed(date)) {
+        // console.log("is closed", date)
         date = new TZDate(subDays(date, 1), 'America/New_York');
     }
 
+    // Return the date formatted as YYYY-MM-DD
     return format(date, 'yyyy-MM-dd');
 }
 
@@ -77,7 +87,7 @@ export const fromDbToStr = (date: Date): string => {
 };
 
 export const fromStrToDate = (dateStr: string): Date => {
-    return new UTCDate(parseISO(dateStr));
+    return new UTCDate(dateStr);
 };
 
 // Add these functions to utils.ts

@@ -83,6 +83,6 @@ type AlphaVantageQuery = {
 } & Record<string, string>
 
 export const requestAlphaVantage = async (query: AlphaVantageQuery, priority?: number) => {
-    console.log(`Queuing AlphaVantage request: ${query.function}, ${query.symbol || ''}, priority: ${priority || 10}`)
+    // console.log(`Queuing AlphaVantage request: ${query.function}, ${query.symbol || ''}, priority: ${priority || 10}`)
     return await alphaVantageQueue.addToQueue(query, priority);
 }
