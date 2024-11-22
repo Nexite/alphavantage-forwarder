@@ -45,25 +45,37 @@ async function startServer() {
     app.get('/alpaca', handleAlpaca);
 
     app.get('/historicalQuotes', async (req: Request, res: Response) => {
-      const symbol = req.query.symbol as string;
-      const days = parseInt(req.query.days as string);
-      const skip = parseInt(req.query.skip as string) || 0;
-      console.log('historicalQuotes', symbol, days, skip)
-      const quotes = await getQuoteRange(symbol, days, skip);
-      res.json(quotes);
+      try {
+        const symbol = req.query.symbol as string;
+        const days = parseInt(req.query.days as string);
+        const skip = parseInt(req.query.skip as string) || 0;
+        console.log('historicalQuotes', symbol, days, skip)
+        const quotes = await getQuoteRange(symbol, days, skip);
+        res.json(quotes);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get historical quotes' });
+      }
     });
 
     app.get('/historicalOptions', async (req: Request, res: Response) => {
-      const symbol = req.query.symbol as string;
-      const days = parseInt(req.query.days as string);
-      const skip = parseInt(req.query.skip as string) || 0;
-      console.log('historicalOptions', symbol, days, skip)
-      const options = await getOptionsRange(symbol, days, skip);
-      res.json(options);
+      try { 
+        const symbol = req.query.symbol as string;
+        const days = parseInt(req.query.days as string);
+        const skip = parseInt(req.query.skip as string) || 0;
+        console.log('historicalOptions', symbol, days, skip)
+        const options = await getOptionsRange(symbol, days, skip);
+        res.json(options);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get historical options' });
+      }
     });
 
     app.get('/queue-status', (req, res) => {
-      res.json(alphaVantageQueue.stats);
+      try {
+        res.json(alphaVantageQueue.stats);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get queue status' });
+      }
     });
 
     // Check if SSL certificates exist
