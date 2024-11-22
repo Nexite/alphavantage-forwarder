@@ -15,7 +15,8 @@ import { getOptionsRange } from './options';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.HTTPS_PORT || 443;
+const httpPort = process.env.HTTP_PORT || 80;
 
 export const authorizedUsers: string[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
@@ -80,8 +81,8 @@ async function startServer() {
       });
 
       // Start HTTP server for redirecting
-      http.createServer(httpApp).listen(80, () => {
-        console.log('HTTP Server running on port 80 (redirecting to HTTPS)');
+      http.createServer(httpApp).listen(httpPort, () => {
+        console.log(`HTTP Server running on port ${httpPort} (redirecting to HTTPS)`);
       });
 
       // Start HTTPS server
@@ -94,9 +95,10 @@ async function startServer() {
         console.log(`HTTPS Server running on port ${port}`);
       });
     } else {
-      // Development without SSL
-      http.createServer(app).listen(port, () => {
-        console.log(`HTTP Server running on port ${port}`);
+      // Development without SSL - use a different port
+      const devPort = 3000;
+      http.createServer(app).listen(devPort, () => {
+        console.log(`HTTP Server running on port ${devPort} (development)`);
       });
     }
 
