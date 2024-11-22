@@ -53,6 +53,7 @@ async function startServer() {
         const quotes = await getQuoteRange(symbol, days, skip);
         res.json(quotes);
       } catch (error) {
+        console.error('Failed to get historical quotes', error);
         res.status(500).json({ error: 'Failed to get historical quotes' });
       }
     });
@@ -66,6 +67,7 @@ async function startServer() {
         const options = await getOptionsRange(symbol, days, skip);
         res.json(options);
       } catch (error) {
+        console.error('Failed to get historical options', error);
         res.status(500).json({ error: 'Failed to get historical options' });
       }
     });
