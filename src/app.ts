@@ -4,13 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-import { handleAlphaVantage } from './alphavantage';
+import { handleAlphaVantage, requestAlphaVantage } from './alphavantage';
 import { handleAlpaca } from './alpaca';
 import cors from 'cors';
 import { getQuoteRange } from './quotes';
 import { initializeDb } from './db';
 import { alphaVantageQueue } from './queue';
 import { getOptionsRange } from './options';
+import TTLCache from '@isaacs/ttlcache';
 
 dotenv.config();
 
@@ -21,6 +22,11 @@ const httpPort = process.env.HTTP_PORT || 80;
 export const authorizedUsers: string[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
 );
+
+const overviewCache = new TTLCache({
+  ttl: 60 * 60 * 24 * 1000, // 1 day
+  max: 1000
+});
 
 // Initialize the application
 async function startServer() {
@@ -36,7 +42,7 @@ async function startServer() {
         'http://localhost:3000',
         'http://localhost:3001',
         'https://options.nikhilgarg.com',
-        'https://stocks.nikhilgarg.com' 
+        'https://stocks.nikhilgarg.com'
       ]
     }));
 
@@ -59,7 +65,7 @@ async function startServer() {
     });
 
     app.get('/historicalOptions', async (req: Request, res: Response) => {
-      try { 
+      try {
         const symbol = req.query.symbol as string;
         const days = parseInt(req.query.days as string);
         const skip = parseInt(req.query.skip as string) || 0;
@@ -80,15 +86,33 @@ async function startServer() {
       }
     });
 
+    app.get('/overview', async (req, res) => {
+      try {
+        const symbol = req.query.symbol as string;
+        const cachedResult = overviewCache.get(symbol);
+        if (cachedResult) {
+          res.json(cachedResult);
+        } else {
+          console.log('Cache miss for overview', symbol);
+          const result = await requestAlphaVantage({ function: 'OVERVIEW', symbol: symbol.toUpperCase() });
+          overviewCache.set(symbol, result);
+          res.json(result);
+        }
+      } catch (error) {
+        console.error('Failed to get overview', error);
+        res.status(500).json({ error: 'Failed to get overview' });
+      }
+    });
+
     // Check if SSL certificates exist
     const sslPath = path.join(__dirname, '..');
     const keyPath = path.join(sslPath, 'key.pem');
     const certPath = path.join(sslPath, 'cert.pem');
-    
+
     if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
       // Create HTTP server for redirecting
       const httpApp = express();
-      
+
       // Redirect all HTTP traffic to HTTPS
       httpApp.use((req, res) => {
         res.redirect(`https://${req.hostname}${req.url}`);
@@ -104,7 +128,7 @@ async function startServer() {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath)
       };
-      
+
       https.createServer(httpsOptions, app).listen(port, () => {
         console.log(`HTTPS Server running on port ${port}`);
       });
