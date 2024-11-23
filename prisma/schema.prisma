@@ -23,7 +23,6 @@ model DailyQuote {
   
   @@id([symbolId, date])
   @@index([date])
-  @@index([symbolId, date])
 }
 
 model DailyOptionsChain {
@@ -33,10 +32,8 @@ model DailyOptionsChain {
   calls           DailyOptionCall[]
   puts            DailyOptionPut[]
 
-  @@unique([symbolId, date])
   @@id([symbolId, date])
   @@index([date])
-  @@index([symbolId, date])
 }
 
 model DailyOptionPut {
@@ -64,8 +61,7 @@ model DailyOptionPut {
 
   @@id([contractId, date])
   @@index([symbolId, expiration])
-  @@index([date, symbolId])
-  @@index([contractId, symbolId, date])
+  @@index([symbolId, date, strike])
 }
 
 model DailyOptionCall {
@@ -90,16 +86,11 @@ model DailyOptionCall {
   theta             Decimal
   vega              Decimal
   rho               Decimal
+
   @@id([contractId, date])
   @@index([symbolId, expiration])
-  @@index([date, symbolId])
-  @@index([contractId, symbolId, date])
+  @@index([symbolId, date, strike])
 }
-
-// enum OptionType {
-//   CALL
-//   PUT
-// }
 
 
 model Holiday {
