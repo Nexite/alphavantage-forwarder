@@ -107,7 +107,8 @@ export const getHistoricalQuoteRange = async (symbol: string, days: number, skip
     if (fetchRealtime) {
         console.log('fetching realtime quote')
         const realtimeQuote = await fetchRealtimeQuote(symbol)
-        const realtimeDate = new UTCDate()
+        // realtime date is the date in est with no timezone information
+        const realtimeDate = fromStrToDate(format(new TZDate(new UTCDate(), 'America/New_York'), 'yyyy-MM-dd'))
         realtimeDate.setHours(0, 0, 0, 0)
         quotes.push({
             date: realtimeDate,
