@@ -1,4 +1,4 @@
-import { chunk, fromDbToStr, fromStrToDate, getLastTradingDay, isClosed, isTradingSession } from "./utils"
+import { chunk, fromDbToStr, fromStrToDate, getLastTradingDay, isTradingSession } from "./utils"
 import { symbolManager } from "./symbolManager"
 import { getDaysAgo, getValidTradingDates } from "./utils"
 import { dbClient } from "./db"
@@ -7,8 +7,11 @@ import { Prisma } from "@prisma/client"
 import { TZDate } from "@date-fns/tz"
 import { format, subDays } from "date-fns"
 import { UTCDate } from "@date-fns/utc"
+import { Request, Response } from 'express';
+import { Queue } from "./queue"
 
-
+// Create a queue for background database operations
+const dbQueue = new Queue()
 
 const fetchHistoricalOptionsForSymbol = async (symbol: string, date: string) => {
     const options = await requestAlphaVantage({
@@ -86,7 +89,7 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
             vega: new Prisma.Decimal(o.vega),
             rho: new Prisma.Decimal(o.rho),
         }
-        
+
         if (o.type === "put") {
             puts.push(common)
         } else {
@@ -109,7 +112,7 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
     let retries = 3
     while (retries > 0) {
         try {
-            const result = await dbClient.$transaction(async (tx) => {
+            await dbClient.$transaction(async (tx) => {
 
                 if (puts.length > 0) {
                     await tx.dailyOptionPut.createMany({
@@ -124,26 +127,15 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
                         skipDuplicates: true
                     })
                 }
-
-                return {
-                    date: fromStrToDate(options[0].date),
-                    puts: puts.map(p => ({
-                        expiration: p.expiration,
-                        strike: p.strike,
-                        bid: p.bid
-                    }))
-                }
             }, {
                 timeout: 120000, // 2 minute timeout
                 maxWait: 120000, // 2 minute max wait
                 isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted // Less strict isolation level
             })
-
-            return result
         } catch (error) {
             retries--
-            if (retries === 0) throw error
-            console.log(`Transaction failed, retrying... (${retries} attempts left)`)
+            if (retries === 0) console.error(`Transaction failed for symbol ${options[0].symbol}, giving up`)
+            console.log(`Transaction failed for symbol ${options[0].symbol}, retrying... (${retries} attempts left)`)
             await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retrying
         }
     }
@@ -158,6 +150,13 @@ type HistoricalOptionsRangeResult = {
         ask: number
         bid: number
     }[]
+}
+
+const queueOptionsForStorage = (optionsData: AlphaVantageOptionsChainResponse) => {
+    dbQueue.add(async () => {
+        await createDbEntryForOptionsChain(optionsData);
+        return; // explicitly return void
+    });
 }
 
 export const getHistoricalOptionsRange = async (symbol: string, days: number, skip: number = 0): Promise<HistoricalOptionsRangeResult[]> => {
@@ -221,32 +220,27 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
                 batch.map(date => fetchHistoricalOptionsForSymbol(upperSymbol, date))
             )
 
-            // Process all dates in parallel
-            await Promise.all(
-                missingOptions.map(options => createDbEntryForOptionsChain(options))
-            )
+            // Queue the database operations instead of waiting for them
+            missingOptions.forEach(options => queueOptionsForStorage(options))
 
             // Transform the new data directly
-            const newOptions = missingOptions.map(optionsResponse => {
-                return {
-                    date: fromStrToDate(optionsResponse.data[0].date),
-                    puts: optionsResponse.data
-                        .filter((o: AlphaVantageOption) => o.type === 'put')
-                        .map((p: AlphaVantageOption) => ({
-                            contractId: p.contractID,
-                            expiration: fromStrToDate(p.expiration),
-                            strike: Number(p.strike),
-                            bid: Number(p.bid),
-                            ask: Number(p.ask)
-                        }))
-                }
-            })
+            const newOptions = missingOptions.map(optionsResponse => ({
+                date: fromStrToDate(optionsResponse.data[0].date),
+                puts: optionsResponse.data
+                    .filter((o: AlphaVantageOption) => o.type === 'put')
+                    .map((p: AlphaVantageOption) => ({
+                        contractId: p.contractID,
+                        expiration: fromStrToDate(p.expiration),
+                        strike: Number(p.strike),
+                        bid: Number(p.bid),
+                        ask: Number(p.ask)
+                    }))
+            }))
 
             // Add new options to results
             options = [...options, ...newOptions]
         }
     }
-    // console.log(`fetchRealtime: ${fetchRealtime}`)
     if (fetchRealtime) {
         const realtimeOptions = (await fetchRealtimeOptionsForSymbol(upperSymbol)).data.filter((o: AlphaVantageOption) => o.type === 'put')
         options = [{
@@ -279,7 +273,6 @@ export const getOptionsRange = async (symbol: string, days: number, skip: number
 
     // if it is currently a trading session, add in the live option price
     if (isTradingSession()) {
-        // console.log("trading session: ", isTradingSession())
         const realtimeOptions = (await fetchRealtimeOptionsForSymbol(symbol)).data.filter((o: AlphaVantageOption) => o.type === 'put')
         options = [{
             date: new Date(realtimeOptions[0].date),

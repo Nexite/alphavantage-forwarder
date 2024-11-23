@@ -2,7 +2,7 @@ import { authorizedUsers } from "./app";
 import { Request, Response } from 'express';
 import TTLCache from '@isaacs/ttlcache';
 import * as db from './db';
-import { alphaVantageQueue } from './queue';
+import { alphaVantageQueue } from './alphaQueue';
 
 const cache = new TTLCache<string, string>({ max: 200, ttl: 5 * 60 * 1000 })
 

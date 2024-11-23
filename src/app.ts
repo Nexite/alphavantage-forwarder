@@ -9,7 +9,7 @@ import { handleAlpaca } from './alpaca';
 import cors from 'cors';
 import { getQuoteRange } from './quotes';
 import { initializeDb } from './db';
-import { alphaVantageQueue } from './queue';
+import { alphaVantageQueue } from './alphaQueue';
 import { getOptionsRange } from './options';
 import TTLCache from '@isaacs/ttlcache';
 
