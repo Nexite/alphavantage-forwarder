@@ -12,7 +12,7 @@ import { initializeDb } from './db';
 import { alphaVantageQueue } from './alphaQueue';
 import { getOptionsRange } from './options';
 import TTLCache from '@isaacs/ttlcache';
-
+import compression from 'compression';
 dotenv.config();
 
 const app = express();
@@ -37,6 +37,7 @@ async function startServer() {
     app.use(express.json());
     app.use(express.static("public"));
 
+    app.use(compression());
     app.use(cors({
       origin: [
         'http://localhost:3000',
