@@ -2,16 +2,36 @@ import { dbClient } from "./db";
 
 class SymbolManager {
     private knownSymbols = new Set<string>();
+    private pendingPromises = new Map<string, Promise<void>>();
 
     async ensureSymbol(symbolId: string) {
         symbolId = symbolId.toUpperCase();
         if (!this.knownSymbols.has(symbolId)) {
-            await dbClient.symbol.upsert({
-                where: { id: symbolId },
-                update: {},
-                create: { id: symbolId }
-            });
-            this.knownSymbols.add(symbolId);
+            // If there's already a pending promise for this symbol, wait for it
+            const existingPromise = this.pendingPromises.get(symbolId);
+            if (existingPromise) {
+                console.log(`waiting for existing promise for ${symbolId}`)
+                await existingPromise;
+                return;
+            }
+
+            // Create a new promise for this symbol
+            const promise = (async () => {
+                try {
+                    await dbClient.symbol.upsert({
+                        where: { id: symbolId },
+                        update: {},
+                        create: { id: symbolId }
+                    });
+                    this.knownSymbols.add(symbolId);
+                } finally {
+                    this.pendingPromises.delete(symbolId);
+                }
+            })();
+
+            // Store the promise so other requests can wait for it
+            this.pendingPromises.set(symbolId, promise);
+            await promise;
         }
     }
 }
