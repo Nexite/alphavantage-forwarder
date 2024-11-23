@@ -28,7 +28,6 @@ class AlphaVantageQueue {
     }
 
     private async executeRequest(request: QueuedRequest): Promise<void> {
-        console.log("executing queue")
         const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
         const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
         
