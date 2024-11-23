@@ -58,19 +58,19 @@ type AlphaVantageOptionsChainResponse = {
 
 const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVantageOptionsChainResponse) => {
     const options = alphaVantageOptionsChain.data
-    if (!options || options.length === 0) return
+    if (!options?.length) return
 
-    const date = fromStrToDate(options[0].date)
-    const symbol = options[0].symbol.toUpperCase()
+    // Process options in smaller chunks to reduce memory usage
+    const puts: Prisma.DailyOptionPutCreateManyInput[] = []
+    const calls: Prisma.DailyOptionCallCreateManyInput[] = []
 
-    // Process all data transformations before any DB operations
-    const [puts, calls] = options.reduce((acc, o) => {
+    for (const o of options) {
         const common = {
             contractId: o.contractID,
-            date: date,
+            date: fromStrToDate(o.date),
             expiration: fromStrToDate(o.expiration),
             strike: new Prisma.Decimal(o.strike),
-            symbolId: symbol,
+            symbolId: o.symbol.toUpperCase(),
             last: new Prisma.Decimal(o.last),
             mark: new Prisma.Decimal(o.mark),
             bid: new Prisma.Decimal(o.bid),
@@ -86,24 +86,23 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
             vega: new Prisma.Decimal(o.vega),
             rho: new Prisma.Decimal(o.rho),
         }
-
+        
         if (o.type === "put") {
-            acc[0].push(common)
+            puts.push(common)
         } else {
-            acc[1].push(common)
+            calls.push(common)
         }
-        return acc
-    }, [[], []] as [Prisma.DailyOptionPutCreateManyInput[], Prisma.DailyOptionCallCreateManyInput[]])
+    }
 
     // Ensure symbol exists before transaction
-    await symbolManager.ensureSymbol(symbol)
+    await symbolManager.ensureSymbol(options[0].symbol.toUpperCase())
 
 
     await dbClient.dailyOptionsChain.upsert({
         where: {
-            symbolId_date: { symbolId: symbol, date }
+            symbolId_date: { symbolId: options[0].symbol.toUpperCase(), date: fromStrToDate(options[0].date) }
         },
-        create: { symbolId: symbol, date },
+        create: { symbolId: options[0].symbol.toUpperCase(), date: fromStrToDate(options[0].date) },
         update: {}
     })
 
@@ -112,15 +111,12 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
         try {
             const result = await dbClient.$transaction(async (tx) => {
 
-                const insertedPuts = puts.length > 0 ? await tx.dailyOptionPut.createManyAndReturn({
-                    data: puts,
-                    skipDuplicates: true,
-                    select: {
-                        expiration: true,
-                        strike: true,
-                        bid: true
-                    }
-                }) : []
+                if (puts.length > 0) {
+                    await tx.dailyOptionPut.createMany({
+                        data: puts,
+                        skipDuplicates: true
+                    })
+                }
 
                 if (calls.length > 0) {
                     await tx.dailyOptionCall.createMany({
@@ -130,11 +126,11 @@ const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVanta
                 }
 
                 return {
-                    date,
-                    puts: insertedPuts.map(p => ({
+                    date: fromStrToDate(options[0].date),
+                    puts: puts.map(p => ({
                         expiration: p.expiration,
-                        strike: p.strike.toNumber(),
-                        bid: p.bid.toNumber()
+                        strike: p.strike,
+                        bid: p.bid
                     }))
                 }
             }, {
