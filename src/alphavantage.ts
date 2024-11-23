@@ -24,10 +24,20 @@ export type AlphaVantageOption = {
     // symbol,expiration,strike,type,last,mark,bid,bid_size,ask,ask_size,volume,open_interest,date
 }
 
+type AlphaVantageQuery = {
+    function: string;
+} & Record<string, string>
+
+export const rawRequestAlphaVantage = async (query: AlphaVantageQuery, priority?: number): Promise<ReturnType<typeof fetch>> => {
+    return await alphaVantageQueue.addToQueue(query, priority, true);
+}
+
+export const requestAlphaVantage = async (query: AlphaVantageQuery, priority?: number) => {
+    return await alphaVantageQueue.addToQueue(query, priority, false)
+}
+
 export const handleAlphaVantage = async (req: Request, res: Response) => {
     try {
-        const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
-        const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
         // get request params
         const query = req.query;
 
@@ -37,52 +47,41 @@ export const handleAlphaVantage = async (req: Request, res: Response) => {
         }
         delete query.username;
 
-        const queryParams = Object.fromEntries(Object.entries({ ...query, apikey: apiKey }).sort());
+        const queryParams = Object.fromEntries(Object.entries(query).sort());
 
         // check cache
         const cacheKey = JSON.stringify(queryParams);
         if (cache.has(cacheKey)) {
             if (!queryParams.datatype || queryParams.datatype !== 'csv') res.setHeader('Content-Type', 'application/json');
             res.send(cache.get(cacheKey));
-        } else {
-            // make request to alpha vantage
-            const response = await fetch(`${alphaAdvantageUrl}?${new URLSearchParams(queryParams as Record<string, string>)}`);
-            // response might be csv or json but forward it
-            if (response.headers.get('content-type') === 'application/json') {
-                const data = await response.json();
-                // update cache
-                if (!data.Information) {
-                    cache.set(cacheKey, JSON.stringify(data));
-                }
+            return;
+        }
 
-                // set json header
-                res.setHeader('Content-Type', 'application/json');
-                res.send(data);
-            } else {
-                const data = await response.text();
-                cache.set(cacheKey, data)
-                res.send(data);
+        // make request to alpha vantage through queue
+        const response = await rawRequestAlphaVantage(queryParams as AlphaVantageQuery);
+        
+        // response might be csv or json but forward it
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+            const data = await response.json();
+            // update cache
+            if (!data.Information) {
+                cache.set(cacheKey, JSON.stringify(data));
             }
+
+            // set json header
+            res.setHeader('Content-Type', 'application/json');
+            res.send(data);
+        } else {
+            const data = await response.text();
+            cache.set(cacheKey, data)
+            res.send(data);
         }
 
         console.log(`NEW ALPHAVANTAGE REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
-        // metrics
-        // if (query.symbol) await db.ticker(query.symbol as string);
-        // // get ip
-        // if (req.ip) await db.ip(req.ip);
+        
     } catch (error) {
         console.error(error);
         res.status(500).send('Internal Server Error');
     }
-}
-
-
-
-type AlphaVantageQuery = {
-    function: string;
-} & Record<string, string>
-
-export const requestAlphaVantage = async (query: AlphaVantageQuery, priority?: number) => {
-    // console.log(`Queuing AlphaVantage request: ${query.function}, ${query.symbol || ''}, priority: ${priority || 10}`)
-    return await alphaVantageQueue.addToQueue(query, priority);
 }

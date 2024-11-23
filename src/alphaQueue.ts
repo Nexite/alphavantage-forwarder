@@ -3,6 +3,7 @@ interface QueuedRequest {
     resolve: (value: any) => void;
     reject: (error: any) => void;
     priority: number;
+    rawResponse?: boolean;
 }
 
 class AlphaVantageQueue {
@@ -27,6 +28,7 @@ class AlphaVantageQueue {
     }
 
     private async executeRequest(request: QueuedRequest): Promise<void> {
+        console.log("executing queue")
         const alphaAdvantageUrl = 'https://www.alphavantage.co/query';
         const apiKey = process.env.ALPHA_ADVANTAGE_API_KEY;
         
@@ -38,6 +40,12 @@ class AlphaVantageQueue {
                 } as Record<string, string>)}`
             );
             
+            if (request.rawResponse) {
+                request.resolve(response);
+                this.requestTimestamps.push(Date.now());
+                return;
+            }
+
             const data = await response.json();
 
             if (data.Information?.includes('Thank you for using Alpha Vantage')) {
@@ -95,7 +103,7 @@ class AlphaVantageQueue {
         }
     }
 
-    public async addToQueue(query: any, priority: number = this.DEFAULT_PRIORITY): Promise<any> {
+    public async addToQueue(query: any, priority: number = this.DEFAULT_PRIORITY, rawResponse: boolean = false): Promise<any> {
         const clampedPriority = Math.max(0, Math.min(priority, this.DEFAULT_PRIORITY));
         
         return new Promise((resolve, reject) => {
@@ -103,7 +111,8 @@ class AlphaVantageQueue {
                 query, 
                 resolve, 
                 reject, 
-                priority: clampedPriority 
+                priority: clampedPriority,
+                rawResponse 
             });
             
             if (!this.isProcessing) {
