@@ -11,7 +11,7 @@ const MAX_RETRIES = 3;
 
 export const initSchedule = () => {
     console.log('CRON jobs scheduled');
-    cron.schedule('*/1 * * * *', async () => {
+    cron.schedule('*/15 * * * *', async () => {
         try {
             // get date with time of hour in EST and minute to the nearest 15 minutes
             const now = new Date();
