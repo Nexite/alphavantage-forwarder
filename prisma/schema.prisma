@@ -8,40 +8,43 @@ datasource db {
 }
 
 model Symbol {
-  id              String            @id // e.g., "AAPL"
-  dailyQuotes     DailyQuote[]
-  dailyOptions    DailyOptionsChain[]
-  calls           DailyOptionCall[]
-  puts            DailyOptionPut[]
+  id                   String                 @id // e.g., "AAPL"
+  dailyQuotes          DailyQuote[]
+  dailyOptions         DailyOptionsChain[]
+  calls                DailyOptionCall[]
+  puts                 DailyOptionPut[]
+  IntervalOptionsChain IntervalOptionsChain[]
+  IntervalOptionPut    IntervalOptionPut[]
+  IntervalOptionCall   IntervalOptionCall[]
 }
 
 model DailyQuote {
-  symbol      Symbol      @relation(fields: [symbolId], references: [id])
-  symbolId    String
-  price       Decimal
-  date        DateTime    @db.Date
-  
+  symbol   Symbol   @relation(fields: [symbolId], references: [id])
+  symbolId String
+  price    Decimal
+  date     DateTime @db.Date
+
   @@id([symbolId, date])
   @@index([date])
 }
 
 model DailyOptionsChain {
-  symbol          Symbol                 @relation(fields: [symbolId], references: [id])
-  symbolId        String
-  date            DateTime             @db.Date
-  calls           DailyOptionCall[]
-  puts            DailyOptionPut[]
+  symbol   Symbol            @relation(fields: [symbolId], references: [id])
+  symbolId String
+  date     DateTime          @db.Date
+  calls    DailyOptionCall[]
+  puts     DailyOptionPut[]
 
   @@id([symbolId, date])
   @@index([date])
 }
 
 model DailyOptionPut {
-  contractId         String
-  date               DateTime          @db.Date
-  symbol            Symbol             @relation(fields: [symbolId], references: [id])
-  symbolId          String             
-  chain             DailyOptionsChain  @relation(fields: [symbolId, date], references: [symbolId, date])
+  contractId        String
+  date              DateTime          @db.Date
+  symbol            Symbol            @relation(fields: [symbolId], references: [id])
+  symbolId          String
+  chain             DailyOptionsChain @relation(fields: [symbolId, date], references: [symbolId, date])
   expiration        DateTime          @db.Date
   strike            Decimal
   last              Decimal
@@ -65,11 +68,11 @@ model DailyOptionPut {
 }
 
 model DailyOptionCall {
-  contractId         String
-  date               DateTime          @db.Date
-  symbol            Symbol             @relation(fields: [symbolId], references: [id])
-  symbolId          String             
-  chain             DailyOptionsChain  @relation(fields: [symbolId, date], references: [symbolId, date])
+  contractId        String
+  date              DateTime          @db.Date
+  symbol            Symbol            @relation(fields: [symbolId], references: [id])
+  symbolId          String
+  chain             DailyOptionsChain @relation(fields: [symbolId, date], references: [symbolId, date])
   expiration        DateTime          @db.Date
   strike            Decimal
   last              Decimal
@@ -92,11 +95,65 @@ model DailyOptionCall {
   @@index([symbolId, date, strike])
 }
 
+model IntervalOptionsChain {
+  symbol    Symbol               @relation(fields: [symbolId], references: [id])
+  symbolId  String
+  timestamp DateTime
+  calls     IntervalOptionCall[]
+  puts      IntervalOptionPut[]
+
+  @@id([symbolId, timestamp])
+  @@index([symbolId, timestamp])
+}
+
+model IntervalOptionPut {
+  contractId   String
+  timestamp    DateTime
+  symbol       Symbol               @relation(fields: [symbolId], references: [id])
+  symbolId     String
+  chain        IntervalOptionsChain @relation(fields: [symbolId, timestamp], references: [symbolId, timestamp])
+  expiration   DateTime             @db.Date
+  strike       Decimal
+  last         Decimal
+  mark         Decimal
+  bid          Decimal
+  bidSize      Int
+  ask          Decimal
+  askSize      Int
+  volume       Int
+  openInterest Int
+
+  @@id([contractId, timestamp])
+  @@index([symbolId, expiration])
+  @@index([symbolId, timestamp, strike])
+}
+
+model IntervalOptionCall {
+  contractId   String
+  timestamp    DateTime
+  symbol       Symbol               @relation(fields: [symbolId], references: [id])
+  symbolId     String
+  chain        IntervalOptionsChain @relation(fields: [symbolId, timestamp], references: [symbolId, timestamp])
+  expiration   DateTime             @db.Date
+  strike       Decimal
+  last         Decimal
+  mark         Decimal
+  bid          Decimal
+  bidSize      Int
+  ask          Decimal
+  askSize      Int
+  volume       Int
+  openInterest Int
+
+  @@id([contractId, timestamp])
+  @@index([symbolId, expiration])
+  @@index([symbolId, timestamp, strike])
+}
 
 model Holiday {
-  id          String      @id // format: "{yyyy}-{MM}-{dd}"
-  date        DateTime    @db.Date
-  type        HolidayType
+  id   String      @id // format: "{yyyy}-{MM}-{dd}"
+  date DateTime    @db.Date
+  type HolidayType
 }
 
 enum HolidayType {

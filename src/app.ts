@@ -13,6 +13,8 @@ import { alphaVantageQueue } from './alphaQueue';
 import { getOptionsRange } from './options';
 import TTLCache from '@isaacs/ttlcache';
 import compression from 'compression';
+import { symbolManager } from './symbolManager';
+import { initSchedule } from './schedule';
 dotenv.config();
 
 const app = express();
@@ -32,6 +34,8 @@ const overviewCache = new TTLCache({
 async function startServer() {
   try {
     await initializeDb();
+    await symbolManager.init();
+    initSchedule();
     console.log('Database initialized, holidays cached');
 
     app.use(express.json());
@@ -92,6 +96,16 @@ async function startServer() {
         res.json(alphaVantageQueue.stats);
       } catch (error) {
         res.status(500).json({ error: 'Failed to get queue status' });
+      }
+    });
+
+    app.get('/symbols', async (req, res) => {
+      try {
+        const symbols = symbolManager.getKnownSymbols();
+        res.json(symbols);
+      } catch (error) {
+        console.error('Failed to get symbols', error);
+        res.status(500).json({ error: 'Failed to get symbols' });
       }
     });
 

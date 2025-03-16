@@ -33,7 +33,7 @@ export const rawRequestAlphaVantage = async (query: AlphaVantageQuery, priority?
 }
 
 export const requestAlphaVantage = async (query: AlphaVantageQuery, priority?: number) => {
-    return await alphaVantageQueue.addToQueue(query, priority, false)
+    return await alphaVantageQueue.addToQueue(query, priority, false);
 }
 
 export const handleAlphaVantage = async (req: Request, res: Response) => {
@@ -59,7 +59,7 @@ export const handleAlphaVantage = async (req: Request, res: Response) => {
 
         // make request to alpha vantage through queue
         const response = await rawRequestAlphaVantage(queryParams as AlphaVantageQuery);
-        
+
         // response might be csv or json but forward it
         const contentType = response.headers.get('content-type');
         if (contentType?.includes('application/json')) {
@@ -79,7 +79,7 @@ export const handleAlphaVantage = async (req: Request, res: Response) => {
         }
 
         console.log(`NEW ALPHAVANTAGE REQUEST: ${req.ip}, ${query.function}, ${query.symbol}`);
-        
+
     } catch (error) {
         console.error(error);
         res.status(500).send('Internal Server Error');

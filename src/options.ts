@@ -22,7 +22,15 @@ const fetchHistoricalOptionsForSymbol = async (symbol: string, date: string) => 
     return options
 }
 
-const fetchRealtimeOptionsForSymbol = async (symbol: string) => {
+type RealtimeOptionsResponse = {
+    endpoint: string
+    message: string
+    data: RealtimeOption[]
+}
+
+export type RealtimeOption = Omit<AlphaVantageOption, 'implied_volatility' | 'delta' | 'gamma' | 'theta' | 'vega' | 'rho'>
+
+export const fetchRealtimeOptionsForSymbol: (symbol: string) => Promise<RealtimeOptionsResponse> = async (symbol: string) => {
     const options = await requestAlphaVantage({
         function: "REALTIME_OPTIONS",
         symbol: symbol
@@ -146,9 +154,9 @@ type HistoricalOptionsRangeResult = {
     puts: {
         contractId: string
         expiration: Date
-        strike: number
-        ask: number
-        bid: number
+        strike: number | Prisma.Decimal
+        ask: number | Prisma.Decimal
+        bid: number | Prisma.Decimal
     }[]
 }
 
@@ -224,33 +232,37 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
             missingOptions.forEach(options => queueOptionsForStorage(options))
 
             // Transform the new data directly
-            const newOptions = missingOptions.map(optionsResponse => ({
-                date: fromStrToDate(optionsResponse.data[0].date),
-                puts: optionsResponse.data
-                    .filter((o: AlphaVantageOption) => o.type === 'put')
-                    .map((p: AlphaVantageOption) => ({
-                        contractId: p.contractID,
-                        expiration: fromStrToDate(p.expiration),
-                        strike: Number(p.strike),
-                        bid: Number(p.bid),
-                        ask: Number(p.ask)
-                    }))
-            }))
+            const newOptions = missingOptions.map(optionsResponse => {
+                // console.log(optionsResponse)
+                return {
+                    date: fromStrToDate(optionsResponse.data[0].date),
+                    puts: optionsResponse.data
+                        .filter((o: AlphaVantageOption) => o.type === 'put')
+                        .map((p: AlphaVantageOption) => ({
+                            contractId: p.contractID,
+                            expiration: fromStrToDate(p.expiration),
+                            strike: Number(p.strike),
+                            bid: Number(p.bid),
+                            ask: Number(p.ask)
+                        }))
+                }
+            })
 
             // Add new options to results
             options = [...options, ...newOptions]
         }
     }
+
     if (fetchRealtime) {
-        const realtimeOptions = (await fetchRealtimeOptionsForSymbol(upperSymbol)).data.filter((o: AlphaVantageOption) => o.type === 'put')
+        const realtimeOptions = (await fetchRealtimeOptionsForSymbol(upperSymbol)).data.filter((o) => o.type === 'put')
         options = [{
             date: new Date(realtimeOptions[0].date),
-            puts: realtimeOptions.map((o: AlphaVantageOption) => ({
+            puts: realtimeOptions.map((o) => ({
                 contractId: o.contractID,
                 expiration: new Date(o.expiration),
-                strike: Number(o.strike),
-                bid: Number(o.bid),
-                ask: Number(o.ask)
+                strike: new Prisma.Decimal(o.strike),
+                bid: new Prisma.Decimal(o.bid),
+                ask: new Prisma.Decimal(o.ask)
             }))
         }, ...options]
     }
@@ -273,18 +285,17 @@ export const getOptionsRange = async (symbol: string, days: number, skip: number
 
     // if it is currently a trading session, add in the live option price
     if (isTradingSession()) {
-        const realtimeOptions = (await fetchRealtimeOptionsForSymbol(symbol)).data.filter((o: AlphaVantageOption) => o.type === 'put')
+        const realtimeOptions = (await fetchRealtimeOptionsForSymbol(symbol)).data.filter((o) => o.type === 'put')
         options = [{
             date: new Date(realtimeOptions[0].date),
-            puts: realtimeOptions.map((o: AlphaVantageOption) => ({
+            puts: realtimeOptions.map((o) => ({
                 contractId: o.contractID,
                 expiration: new Date(o.expiration),
-                strike: Number(o.strike),
-                bid: Number(o.bid),
-                ask: Number(o.ask)
+                strike: new Prisma.Decimal(o.strike),
+                bid: new Prisma.Decimal(o.bid),
+                ask: new Prisma.Decimal(o.ask)
             }))
         }, ...options]
-
     }
 
     return options.sort((a, b) => b.date.getTime() - a.date.getTime())

@@ -1,8 +1,24 @@
 import { dbClient } from "./db";
 
 class SymbolManager {
-    private knownSymbols = new Set<string>();
-    private pendingPromises = new Map<string, Promise<void>>();
+    private knownSymbols: Set<string>;
+    private pendingPromises: Map<string, Promise<void>>;
+
+    constructor() {
+        this.knownSymbols = new Set<string>();
+        this.pendingPromises = new Map<string, Promise<void>>();
+    }
+
+    async init() {
+        const symbols = await dbClient.symbol.findMany();
+        symbols.forEach((symbol) => {
+            this.knownSymbols.add(symbol.id);
+        });
+    }
+
+    getKnownSymbols() {
+        return Array.from(this.knownSymbols);
+    }
 
     async ensureSymbol(symbolId: string) {
         symbolId = symbolId.toUpperCase();
