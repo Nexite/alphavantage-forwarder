@@ -7,6 +7,14 @@ import { getClosedHolidays, getHolidays } from './db';
 
 // string in the format of YYYY-MM-DD
 export type DateString = `${number}-${number}-${number}`
+export const validateDateString = (dateString: string): boolean => {
+    return /^(\d{4})-(\d{2})-(\d{2})$/.test(dateString);
+}
+
+export const extractDateString = (dateString: string): {day: number, month: number, year: number} => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return { day, month, year };
+}
 
 export const isClosed = (date: Date) => {
     const holiday = getClosedHolidays().has(format(date, 'yyyy-MM-dd'));

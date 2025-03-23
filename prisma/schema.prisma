@@ -63,8 +63,8 @@ model DailyOptionPut {
   symbol            Symbol            @relation(fields: [symbolId], references: [id])
 
   @@id([contractId, date])
+  @@index([symbolId, date])
   @@index([symbolId, expiration])
-  @@index([symbolId, date, strike])
 }
 
 model DailyOptionCall {
@@ -91,8 +91,8 @@ model DailyOptionCall {
   symbol            Symbol            @relation(fields: [symbolId], references: [id])
 
   @@id([contractId, date])
+  @@index([symbolId, date])
   @@index([symbolId, expiration])
-  @@index([symbolId, date, strike])
 }
 
 model IntervalOptionsChain {
@@ -103,7 +103,6 @@ model IntervalOptionsChain {
   symbol    Symbol               @relation(fields: [symbolId], references: [id])
 
   @@id([symbolId, timestamp])
-  @@index([symbolId, timestamp])
 }
 
 model IntervalOptionPut {
@@ -124,8 +123,8 @@ model IntervalOptionPut {
   chain        IntervalOptionsChain @relation(fields: [symbolId, timestamp], references: [symbolId, timestamp])
 
   @@id([contractId, timestamp])
+  @@index([symbolId, timestamp])
   @@index([symbolId, expiration])
-  @@index([symbolId, timestamp, strike])
 }
 
 model IntervalOptionCall {
@@ -146,8 +145,8 @@ model IntervalOptionCall {
   chain        IntervalOptionsChain @relation(fields: [symbolId, timestamp], references: [symbolId, timestamp])
 
   @@id([contractId, timestamp])
+  @@index([symbolId, timestamp])
   @@index([symbolId, expiration])
-  @@index([symbolId, timestamp, strike])
 }
 
 model Holiday {

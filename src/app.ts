@@ -10,11 +10,12 @@ import cors from 'cors';
 import { getQuoteRange } from './quotes';
 import { initializeDb } from './db';
 import { alphaVantageQueue } from './alphaQueue';
-import { getOptionsRange } from './options';
+import { getOptionsRange, getOptionsRangeForInterval } from './options';
 import TTLCache from '@isaacs/ttlcache';
 import compression from 'compression';
 import { symbolManager } from './symbolManager';
 import { initSchedule } from './schedule';
+import { DateString, validateDateString } from './utils';
 dotenv.config();
 
 const app = express();
@@ -35,7 +36,7 @@ async function startServer() {
   try {
     await initializeDb();
     await symbolManager.init();
-    initSchedule();
+    // initSchedule();
     console.log('Database initialized, holidays cached');
 
     app.use(express.json());
@@ -128,6 +129,28 @@ async function startServer() {
       } catch (error) {
         console.error('Failed to get overview', error);
         res.status(500).json({ error: 'Failed to get overview' });
+      }
+    });
+
+    app.get('/options-interval', async (req, res) => {
+      try {
+        const symbol = req.query.symbol as string;
+        const startDate = req.query.startDate as DateString;
+        const endDate = req.query.endDate as DateString;
+
+        if (!symbol || !startDate) {
+          return res.status(400).json({ error: 'Missing required parameters' });
+        }
+
+        if (!validateDateString(startDate) || (endDate && !validateDateString(endDate))) {
+          return res.status(400).json({ error: 'Invalid date string' });
+        }
+
+        const options = await getOptionsRangeForInterval(symbol, startDate, endDate);
+        res.json(options);
+      } catch (error) {
+        console.error('Failed to get options interval', error);
+        res.status(500).json({ error: 'Failed to get options interval' });
       }
     });
 

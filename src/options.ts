@@ -1,4 +1,4 @@
-import { chunk, DateString, fromDbToStr, fromStrToDate, getLastTradingDay, isTradingSession } from "./utils"
+import { chunk, DateString, extractDateString, fromDbToStr, fromStrToDate, getLastTradingDay, isTradingSession } from "./utils"
 import { symbolManager } from "./symbolManager"
 import { getDaysAgo, getValidTradingDates } from "./utils"
 import { dbClient } from "./db"
@@ -311,14 +311,23 @@ export const getOptionsRange = async (symbol: string, days: number, skip: number
     return options.sort((a, b) => b.date.getTime() - a.date.getTime())
 }
 
-export const getOptionsRangeForInterval = async (symbol: string, startDate: DateString, endDate: DateString = getLastTradingDay(false)): Promise<IntervalOptionsRangeResult[]> => {
-    // 12am est on startDate
+export const getOptionsRangeForInterval = async (symbol: string, startDate: DateString, endDate: DateString = getLastTradingDay(true)): Promise<IntervalOptionsRangeResult[]> => {
     const ESTStartDate = new TZDate(startDate, 'America/New_York')
+    const { day, month, year } = extractDateString(startDate)
+    ESTStartDate.setDate(day)
+    ESTStartDate.setMonth(month - 1)
+    ESTStartDate.setFullYear(year)
     ESTStartDate.setHours(0, 0, 0, 0)
     const ESTEndDate = new TZDate(endDate, 'America/New_York')
+    const { day: ESTEndDateDay, month: ESTEndDateMonth, year: ESTEndDateYear } = extractDateString(endDate)
+    ESTEndDate.setDate(ESTEndDateDay)
+    ESTEndDate.setMonth(ESTEndDateMonth - 1)
+    ESTEndDate.setFullYear(ESTEndDateYear)
     ESTEndDate.setHours(23, 59, 59, 999)
     const UTCStartDate = new UTCDate(ESTStartDate)
     const UTCEndDate = new UTCDate(ESTEndDate)
+    console.log(`UTCStartDate: ${UTCStartDate} UTCEndDate: ${UTCEndDate} lastTradingDay: ${getLastTradingDay(true)} `)
+
     const options = await dbClient.intervalOptionsChain.findMany({
         where: {
             symbolId: symbol.toUpperCase(),
@@ -344,14 +353,17 @@ export const getOptionsRangeForInterval = async (symbol: string, startDate: Date
         }
     })
 
-    return options.map(o => ({
-        timestamp: new TZDate(o.timestamp, 'America/New_York'),
-        puts: o.puts.map(p => ({
-            contractId: p.contractId,
-            expiration: p.expiration,
-            strike: p.strike,
-            bid: p.bid,
-            ask: p.ask
-        }))
-    }))
+    return options.map(o => {
+        const timestamp = new TZDate(o.timestamp, 'America/New_York')
+        return {
+            timestamp: timestamp,
+            puts: o.puts.map(p => ({
+                contractId: p.contractId,
+                expiration: p.expiration,
+                strike: p.strike,
+                bid: p.bid,
+                ask: p.ask
+            }))
+        }
+    })
 }
