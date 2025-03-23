@@ -133,3 +133,4 @@ dist
 # Database
 prisma/database.sqlite
 prisma/database.sqlite-journal
+.vscode/

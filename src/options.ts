@@ -1,4 +1,4 @@
-import { chunk, fromDbToStr, fromStrToDate, getLastTradingDay, isTradingSession } from "./utils"
+import { chunk, DateString, fromDbToStr, fromStrToDate, getLastTradingDay, isTradingSession } from "./utils"
 import { symbolManager } from "./symbolManager"
 import { getDaysAgo, getValidTradingDates } from "./utils"
 import { dbClient } from "./db"
@@ -159,6 +159,17 @@ type HistoricalOptionsRangeResult = {
         bid: number | Prisma.Decimal
     }[]
 }
+type IntervalOptionsRangeResult = {
+    timestamp: Date
+    puts: {
+        contractId: string
+        expiration: Date
+        strike: number | Prisma.Decimal
+        ask: number | Prisma.Decimal
+        bid: number | Prisma.Decimal
+    }[]
+}
+
 
 const queueOptionsForStorage = (optionsData: AlphaVantageOptionsChainResponse) => {
     dbQueue.add(async () => {
@@ -279,7 +290,6 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
     }))
 }
 
-
 export const getOptionsRange = async (symbol: string, days: number, skip: number = 0): Promise<HistoricalOptionsRangeResult[]> => {
     let options = await getHistoricalOptionsRange(symbol, days, skip)
 
@@ -299,4 +309,49 @@ export const getOptionsRange = async (symbol: string, days: number, skip: number
     }
 
     return options.sort((a, b) => b.date.getTime() - a.date.getTime())
+}
+
+export const getOptionsRangeForInterval = async (symbol: string, startDate: DateString, endDate: DateString = getLastTradingDay(false)): Promise<IntervalOptionsRangeResult[]> => {
+    // 12am est on startDate
+    const ESTStartDate = new TZDate(startDate, 'America/New_York')
+    ESTStartDate.setHours(0, 0, 0, 0)
+    const ESTEndDate = new TZDate(endDate, 'America/New_York')
+    ESTEndDate.setHours(23, 59, 59, 999)
+    const UTCStartDate = new UTCDate(ESTStartDate)
+    const UTCEndDate = new UTCDate(ESTEndDate)
+    const options = await dbClient.intervalOptionsChain.findMany({
+        where: {
+            symbolId: symbol.toUpperCase(),
+            timestamp: {
+                gte: UTCStartDate,
+                lte: UTCEndDate
+            }
+        },
+        orderBy: {
+            timestamp: 'desc'
+        },
+        select: {
+            timestamp: true,
+            puts: {
+                select: {
+                    contractId: true,
+                    expiration: true,
+                    strike: true,
+                    bid: true,
+                    ask: true
+                }
+            }
+        }
+    })
+
+    return options.map(o => ({
+        timestamp: new TZDate(o.timestamp, 'America/New_York'),
+        puts: o.puts.map(p => ({
+            contractId: p.contractId,
+            expiration: p.expiration,
+            strike: p.strike,
+            bid: p.bid,
+            ask: p.ask
+        }))
+    }))
 }

@@ -4,6 +4,10 @@ import { UTCDate } from '@date-fns/utc';
 import { getClosedHolidays, getHolidays } from './db';
 
 // returns true if the date is a holiday that is closed or if it is a weekend, date in yyyy-MM-dd format
+
+// string in the format of YYYY-MM-DD
+export type DateString = `${number}-${number}-${number}`
+
 export const isClosed = (date: Date) => {
     const holiday = getClosedHolidays().has(format(date, 'yyyy-MM-dd'));
     return holiday || date.getDay() === 0 || date.getDay() === 6;
@@ -41,14 +45,14 @@ export const isTradingDay = (date: string) => {
     return !isWeekend && !holiday;
 }
 
-export const getLastTradingDay = (includeToday: boolean = true, startDate?: string) => {
+export const getLastTradingDay = (includeToday: boolean = true, startDate?: DateString): DateString => {
     // Initialize date in NY timezone, using provided startDate or current date
     let date = new TZDate(startDate ? new UTCDate(startDate) : new Date(), 'America/New_York');
 
     // If we're currently in a trading session
     if (isTradingSession()) {
         // Return today's date if includeToday is true
-        if (includeToday) return format(date, 'yyyy-MM-dd');
+        if (includeToday) return format(date, 'yyyy-MM-dd') as DateString;
         // Otherwise move to previous day
         date = new TZDate(subDays(date, 1), 'America/New_York');
     }
@@ -67,23 +71,23 @@ export const getLastTradingDay = (includeToday: boolean = true, startDate?: stri
     }
 
     // Return the date formatted as YYYY-MM-DD
-    return format(date, 'yyyy-MM-dd');
+    return format(date, 'yyyy-MM-dd') as DateString;
 }
 
-export const getCurrentTradingDay = () => {
+export const getCurrentTradingDay = (): DateString | null => {
     const date = new TZDate(new Date(), 'America/New_York');
-    return isTradingSession() ? format(date, 'yyyy-MM-dd') : null;
+    return isTradingSession() ? format(date, 'yyyy-MM-dd') as DateString : null;
 }
 
-export const generateDateRange = (startDate: Date, days: number): string[] => {
+export const generateDateRange = (startDate: Date, days: number): DateString[] => {
     return Array.from({ length: days }, (_, i) => {
         const date = subDays(startDate, i);
-        return format(date, 'yyyy-MM-dd');
+        return format(date, 'yyyy-MM-dd') as DateString;
     }).sort();
 }
 
-export const fromDbToStr = (date: Date): string => {
-    return format(new UTCDate(date), 'yyyy-MM-dd');
+export const fromDbToStr = (date: Date): DateString => {
+    return format(new UTCDate(date), 'yyyy-MM-dd') as DateString;
 };
 
 export const fromStrToDate = (dateStr: string): Date => {
@@ -96,8 +100,8 @@ export function isWeekend(date: Date): boolean {
     return day === 0 || day === 6; // Sunday or Saturday
 }
 
-export function getValidTradingDates(startDate: Date, endDate: Date): string[] {
-    const dates: string[] = [];
+export function getValidTradingDates(startDate: Date, endDate: Date): DateString[] {
+    const dates: DateString[] = [];
     let currentDate = new UTCDate(startDate);
 
     while (currentDate <= endDate) {
