@@ -36,7 +36,7 @@ async function startServer() {
   try {
     await initializeDb();
     await symbolManager.init();
-    // initSchedule();
+    initSchedule();
     console.log('Database initialized, holidays cached');
 
     app.use(express.json());
