@@ -4,7 +4,7 @@ import { symbolManager } from './symbolManager';
 import { TZDate } from '@date-fns/tz';
 import { dbClient } from './db';
 import { Prisma } from '@prisma/client';
-import { isTradingDay, isTradingSession } from './utils';
+import { isTradingSession } from './utils';
 
 // Increased batch size since we're using bulk operations
 const BATCH_SIZE = 20;

@@ -16,6 +16,7 @@ model Symbol {
   IntervalOptionCall   IntervalOptionCall[]
   IntervalOptionPut    IntervalOptionPut[]
   IntervalOptionsChain IntervalOptionsChain[]
+  intervalQuotes       IntervalQuote[]
 }
 
 model DailyQuote {
@@ -147,6 +148,15 @@ model IntervalOptionCall {
   @@id([contractId, timestamp])
   @@index([symbolId, timestamp])
   @@index([symbolId, expiration])
+}
+
+model IntervalQuote {
+  symbolId String
+  timestamp DateTime
+  price Decimal
+  symbol Symbol @relation(fields: [symbolId], references: [id])
+
+  @@id([symbolId, timestamp])
 }
 
 model Holiday {

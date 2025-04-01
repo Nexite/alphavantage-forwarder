@@ -4,18 +4,19 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-import { handleAlphaVantage, requestAlphaVantage } from './alphavantage';
+import { handleAlphaVantage, requestAlphaVantage, AlphaVantageOption } from './alphavantage';
 import { handleAlpaca } from './alpaca';
 import cors from 'cors';
 import { getQuoteRange } from './quotes';
-import { initializeDb } from './db';
+import { initializeDb, dbClient } from './db';
 import { alphaVantageQueue } from './alphaQueue';
-import { getOptionsRange, getOptionsRangeForInterval } from './options';
+import { getOptionsRange, getOptionsRangeForInterval, createDbEntryForOptionsChain } from './options';
 import TTLCache from '@isaacs/ttlcache';
 import compression from 'compression';
 import { symbolManager } from './symbolManager';
 import { initSchedule } from './schedule';
-import { DateString, validateDateString } from './utils';
+import { DateString, validateDateString, getLastTradingDay, fromStrToDate } from './utils';
+import { Prisma } from '@prisma/client';
 dotenv.config();
 
 const app = express();
@@ -139,10 +140,12 @@ async function startServer() {
         const endDate = req.query.endDate as DateString;
 
         if (!symbol || !startDate) {
+          console.log('Missing required parameters', symbol, startDate, endDate)
           return res.status(400).json({ error: 'Missing required parameters' });
         }
 
         if (!validateDateString(startDate) || (endDate && !validateDateString(endDate))) {
+          console.log('Invalid date string', symbol, startDate, endDate)
           return res.status(400).json({ error: 'Invalid date string' });
         }
 
@@ -151,6 +154,145 @@ async function startServer() {
       } catch (error) {
         console.error('Failed to get options interval', error);
         res.status(500).json({ error: 'Failed to get options interval' });
+      }
+    });
+
+    app.get('/latestQuote', async (req, res) => {
+      try {
+        const symbol = req.query.symbol as string;
+        if (!/^[A-Za-z]+$/.test(symbol)) {
+          return res.status(400).json({ error: 'Invalid symbol' });
+        }
+
+        const lastTradingDay = getLastTradingDay();
+        const quote = await dbClient.dailyQuote.findUnique({
+          where: {
+            symbolId_date: {
+              symbolId: symbol.toUpperCase(),
+              date: fromStrToDate(lastTradingDay)
+            }
+          }
+        });
+
+        if (quote) {
+          res.json({
+            date: quote.date,
+            price: quote.price.toNumber()
+          });
+          return;
+        }
+
+        // If not in database, fetch from AlphaVantage
+        const quotes = await requestAlphaVantage({
+          function: 'TIME_SERIES_DAILY_ADJUSTED',
+          symbol: symbol.toUpperCase(),
+          outputsize: 'compact'
+        });
+
+        const latestQuote = quotes['Time Series (Daily)'][lastTradingDay];
+        if (!latestQuote) {
+          return res.status(404).json({ error: 'Quote not found' });
+        }
+
+        // Store in database
+        await dbClient.dailyQuote.create({
+          data: {
+            symbolId: symbol.toUpperCase(),
+            date: fromStrToDate(lastTradingDay),
+            price: new Prisma.Decimal(latestQuote['5. adjusted close'])
+          }
+        });
+
+        res.json({
+          date: fromStrToDate(lastTradingDay),
+          price: Number(latestQuote['5. adjusted close'])
+        });
+      } catch (error) {
+        console.error('Failed to get latest quote', error);
+        res.status(500).json({ error: 'Failed to get latest quote' });
+      }
+    });
+
+    app.get('/latestOptions', async (req, res) => {
+      try {
+        const symbol = req.query.symbol as string;
+        if (!/^[A-Za-z]+$/.test(symbol)) {
+          return res.status(400).json({ error: 'Invalid symbol' });
+        }
+
+        const lastTradingDay = getLastTradingDay();
+        const options = await dbClient.dailyOptionsChain.findUnique({
+          where: {
+            symbolId_date: {
+              symbolId: symbol.toUpperCase(),
+              date: fromStrToDate(lastTradingDay)
+            }
+          },
+          include: {
+            puts: true,
+            calls: true
+          }
+        });
+
+        if (options) {
+          res.json({
+            date: options.date,
+            puts: options.puts.map(put => ({
+              contractId: put.contractId,
+              expiration: put.expiration,
+              strike: put.strike.toNumber(),
+              bid: put.bid.toNumber(),
+              ask: put.ask.toNumber()
+            })),
+            calls: options.calls.map(call => ({
+              contractId: call.contractId,
+              expiration: call.expiration,
+              strike: call.strike.toNumber(),
+              bid: call.bid.toNumber(),
+              ask: call.ask.toNumber()
+            }))
+          });
+          return;
+        }
+
+        // If not in database, fetch from AlphaVantage
+        const optionsResponse = await requestAlphaVantage({
+          function: 'HISTORICAL_OPTIONS',
+          symbol: symbol.toUpperCase(),
+          date: lastTradingDay
+        });
+
+        if (!optionsResponse.data?.length) {
+          return res.status(404).json({ error: 'Options not found' });
+        }
+
+        // Store in database
+        await createDbEntryForOptionsChain(optionsResponse);
+
+        res.json({
+          date: fromStrToDate(lastTradingDay),
+          puts: optionsResponse.data
+            .filter((o: AlphaVantageOption) => o.type === 'put')
+            .map((o: AlphaVantageOption) => ({
+              contractId: o.contractID,
+              expiration: fromStrToDate(o.expiration),
+              strike: Number(o.strike),
+              bid: Number(o.bid),
+              ask: Number(o.ask)
+            })),
+          calls: optionsResponse.data
+            .filter((o: AlphaVantageOption) => o.type === 'call')
+            .map((o: AlphaVantageOption) => ({
+              contractId: o.contractID,
+              expiration: fromStrToDate(o.expiration),
+              strike: Number(o.strike),
+              bid: Number(o.bid),
+              ask: Number(o.ask)
+            }))
+        });
+      } catch (error) {
+        console.error('Failed to get latest options', error);
+        res.status(500).json({ error: 'Failed to get latest options' });
       }
     });
 

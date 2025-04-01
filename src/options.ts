@@ -67,7 +67,7 @@ type AlphaVantageOptionsChainResponse = {
     data: AlphaVantageOption[]
 }
 
-const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVantageOptionsChainResponse) => {
+export const createDbEntryForOptionsChain = async (alphaVantageOptionsChain: AlphaVantageOptionsChainResponse) => {
     const options = alphaVantageOptionsChain.data
     if (!options?.length) return
 
@@ -174,6 +174,7 @@ type IntervalOptionsRangeResult = {
 const queueOptionsForStorage = (optionsData: AlphaVantageOptionsChainResponse) => {
     dbQueue.add(async () => {
         await createDbEntryForOptionsChain(optionsData);
+        console.log(`Options chain data stored for symbol ${optionsData.data[0].symbol}`)
         return; // explicitly return void
     });
 }
