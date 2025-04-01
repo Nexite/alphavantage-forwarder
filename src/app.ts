@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { format } from "date-fns"
 import https from 'https';
 import http from 'http';
 import { handleAlphaVantage, requestAlphaVantage, AlphaVantageOption } from './alphavantage';
@@ -10,13 +11,14 @@ import cors from 'cors';
 import { getQuoteRange } from './quotes';
 import { initializeDb, dbClient } from './db';
 import { alphaVantageQueue } from './alphaQueue';
-import { getOptionsRange, getOptionsRangeForInterval, createDbEntryForOptionsChain } from './options';
+import { getOptionsRange, getOptionsRangeForInterval, createDbEntryForOptionsChain, fetchRealtimeOptionsForSymbol, RealtimeOption } from './options';
 import TTLCache from '@isaacs/ttlcache';
 import compression from 'compression';
 import { symbolManager } from './symbolManager';
 import { initSchedule } from './schedule';
-import { DateString, validateDateString, getLastTradingDay, fromStrToDate } from './utils';
+import { DateString, validateDateString, getLastTradingDay, fromStrToDate, isTradingDay, isTradingSession, fromDbToStr } from './utils';
 import { Prisma } from '@prisma/client';
+import { TZDate } from '@date-fns/tz';
 dotenv.config();
 
 const app = express();
@@ -219,8 +221,31 @@ async function startServer() {
         if (!/^[A-Za-z]+$/.test(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
-
+        const estDate = new TZDate(new Date(), 'America/New_York');
+        if (format(estDate, 'yyyy-MM-dd')) {
+          // console.log(`endDate: ${fromDbToStr(endDate)} estDate: ${format(estDate, 'yyyy-MM-dd')}`)
+          if (estDate.getHours() < 21) {
+            console.log('Fetching live options for', symbol);
+            const options = await fetchRealtimeOptionsForSymbol(symbol);
+            // reformat options to match the response format
+            const optionsResponse = options.data.map((option: RealtimeOption) => ({
+              contractId: option.contractID,
+              expiration: option.expiration,
+              strike: Number(option.strike),
+              bid: Number(option.bid),
+              ask: Number(option.ask),
+              type: option.type,
+              volume: Number(option.volume),
+              openInterest: Number(option.open_interest),
+              last: Number(option.last),
+              mark: Number(option.mark),
+            }));
+            res.json({puts: optionsResponse});
+            return;
+          }
+        }
         const lastTradingDay = getLastTradingDay();
+        console.log('Fetching options for', symbol, lastTradingDay);
         const options = await dbClient.dailyOptionsChain.findUnique({
           where: {
             symbolId_date: {
@@ -263,6 +288,7 @@ async function startServer() {
         });
 
         if (!optionsResponse.data?.length) {
+          console.log(optionsResponse);
           return res.status(404).json({ error: 'Options not found' });
         }
 
