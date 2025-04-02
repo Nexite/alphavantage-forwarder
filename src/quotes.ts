@@ -32,7 +32,7 @@ const updateQuotesForSymbol = async (symbol: string, datesToReturn: string[]) =>
 }
 
 
-const fetchRealtimeQuote = async (symbol: string) => {
+export const fetchRealtimeQuote = async (symbol: string) => {
     const quotes = (await requestAlphaVantage({
         function: 'GLOBAL_QUOTE',
         entitlement: 'realtime',

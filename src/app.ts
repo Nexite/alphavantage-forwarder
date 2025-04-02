@@ -8,7 +8,7 @@ import http from 'http';
 import { handleAlphaVantage, requestAlphaVantage, AlphaVantageOption } from './alphavantage';
 import { handleAlpaca } from './alpaca';
 import cors from 'cors';
-import { getQuoteRange } from './quotes';
+import { getQuoteRange, fetchRealtimeQuote } from './quotes';
 import { initializeDb, dbClient } from './db';
 import { alphaVantageQueue } from './alphaQueue';
 import { getOptionsRange, getOptionsRangeForInterval, createDbEntryForOptionsChain, fetchRealtimeOptionsForSymbol, RealtimeOption } from './options';
@@ -164,6 +164,18 @@ async function startServer() {
         const symbol = req.query.symbol as string;
         if (!/^[A-Za-z]+$/.test(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
+        }
+
+        const estDate = new TZDate(new Date(), 'America/New_York');
+        if (format(estDate, 'yyyy-MM-dd')) {
+          // console.log(`endDate: ${fromDbToStr(endDate)} estDate: ${format(estDate, 'yyyy-MM-dd')}`)
+          if (estDate.getHours() < 21) {
+            console.log('Fetching live quote for', symbol);
+            const quote = await fetchRealtimeQuote(symbol);
+            // reformat options to match the response format
+            res.json({date: fromStrToDate(getLastTradingDay()), price: Number(quote)});
+            return;
+          }
         }
 
         const lastTradingDay = getLastTradingDay();
