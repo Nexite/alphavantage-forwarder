@@ -361,7 +361,7 @@ async function startServer() {
       });
     } else {
       // Development without SSL - use a different port
-      const devPort = 3000;
+      const devPort = process.env.PORT || 3000;
       http.createServer(app).listen(devPort, () => {
         console.log(`HTTP Server running on port ${devPort} (development)`);
       });
