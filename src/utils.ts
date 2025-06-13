@@ -139,3 +139,13 @@ export const getDaysAgo = (days: number, est: boolean = true) => {
     const date = est ? new TZDate(new UTCDate(), 'America/New_York') : new UTCDate();
     return new UTCDate(subDays(date, days));
 }
+
+export const isValidSymbol = (symbol: string): boolean => {
+    // Matches:
+    // - Regular symbols (AAPL, GOOGL)
+    // - Symbols with dots (BRK.B, NEE-U)
+    // - Symbols with hyphens (BA-A, FOUR-A)
+    // - Symbols with plus signs (QBTS+)
+    // - Symbols with dots and special characters (VAL.WS)
+    return /^[A-Za-z]+([.-][A-Za-z0-9]+)?\+?$/.test(symbol);
+}

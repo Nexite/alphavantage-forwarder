@@ -16,7 +16,7 @@ import TTLCache from '@isaacs/ttlcache';
 import compression from 'compression';
 import { symbolManager } from './symbolManager';
 import { initSchedule } from './schedule';
-import { DateString, validateDateString, getLastTradingDay, fromStrToDate, isTradingDay, isTradingSession, fromDbToStr } from './utils';
+import { DateString, validateDateString, getLastTradingDay, fromStrToDate, isTradingDay, isTradingSession, fromDbToStr, isValidSymbol } from './utils';
 import { Prisma } from '@prisma/client';
 import { TZDate } from '@date-fns/tz';
 dotenv.config();
@@ -62,8 +62,7 @@ async function startServer() {
     app.get('/historicalQuotes', async (req: Request, res: Response) => {
       try {
         const symbol = req.query.symbol as string;
-        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
-        if (!/^[A-Za-z]+$/.test(symbol)) {
+        if (!isValidSymbol(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
         const days = parseInt(req.query.days as string);
@@ -80,8 +79,7 @@ async function startServer() {
     app.get('/historicalOptions', async (req: Request, res: Response) => {
       try {
         const symbol = req.query.symbol as string;
-        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
-        if (!/^[A-Za-z]+$/.test(symbol)) {
+        if (!isValidSymbol(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
         const days = parseInt(req.query.days as string);
@@ -116,8 +114,7 @@ async function startServer() {
     app.get('/overview', async (req, res) => {
       try {
         const symbol = req.query.symbol as string;
-        // validate symbol, if it is not all letters, lowecase or uppercase, return 400
-        if (!/^[A-Za-z]+$/.test(symbol)) {
+        if (!isValidSymbol(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
         const cachedResult = overviewCache.get(symbol);
@@ -162,7 +159,7 @@ async function startServer() {
     app.get('/latestQuote', async (req, res) => {
       try {
         const symbol = req.query.symbol as string;
-        if (!/^[A-Za-z]+$/.test(symbol)) {
+        if (!isValidSymbol(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
 
@@ -230,7 +227,7 @@ async function startServer() {
     app.get('/latestOptions', async (req, res) => {
       try {
         const symbol = req.query.symbol as string;
-        if (!/^[A-Za-z]+$/.test(symbol)) {
+        if (!isValidSymbol(symbol)) {
           return res.status(400).json({ error: 'Invalid symbol' });
         }
         const estDate = new TZDate(new Date(), 'America/New_York');
