@@ -174,6 +174,7 @@ type IntervalOptionsRangeResult = {
 const queueOptionsForStorage = (optionsData: AlphaVantageOptionsChainResponse) => {
     dbQueue.add(async () => {
         await createDbEntryForOptionsChain(optionsData);
+        console.log(optionsData)
         console.log(`Options chain data stored for symbol ${optionsData.data[0].symbol}`)
         return; // explicitly return void
     });
@@ -246,6 +247,10 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
             // Transform the new data directly
             const newOptions = missingOptions.map(optionsResponse => {
                 // console.log(optionsResponse)
+                if (optionsResponse.data?.length === 0 && optionsResponse.message.startsWith("No data for symbol")) {
+                    console.log(`optionsresponse ${optionsResponse.message}`)
+                    return undefined
+                }
                 return {
                     date: fromStrToDate(optionsResponse.data[0].date),
                     puts: optionsResponse.data
@@ -258,7 +263,7 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
                             ask: Number(p.ask)
                         }))
                 }
-            })
+            }).filter((o) => o !== undefined)
 
             // Add new options to results
             options = [...options, ...newOptions]
