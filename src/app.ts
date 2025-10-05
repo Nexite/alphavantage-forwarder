@@ -1,9 +1,6 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
 import { format } from "date-fns"
-import https from 'https';
 import http from 'http';
 import { handleAlphaVantage, requestAlphaVantage, AlphaVantageOption } from './alphavantage';
 import { handleAlpaca } from './alpaca';
@@ -22,8 +19,10 @@ import { TZDate } from '@date-fns/tz';
 dotenv.config();
 
 const app = express();
-const port = process.env.HTTPS_PORT || 443;
-const httpPort = process.env.HTTP_PORT || 80;
+const port = process.env.PORT || 3000;
+
+import fs from 'fs';
+import path from 'path';
 
 export const authorizedUsers: string[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
@@ -331,41 +330,10 @@ async function startServer() {
       }
     });
 
-    // Check if SSL certificates exist
-    const sslPath = path.join(__dirname, '..');
-    const keyPath = path.join(sslPath, 'key.pem');
-    const certPath = path.join(sslPath, 'cert.pem');
-
-    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-      // Create HTTP server for redirecting
-      const httpApp = express();
-
-      // Redirect all HTTP traffic to HTTPS
-      httpApp.use((req, res) => {
-        res.redirect(`https://${req.hostname}${req.url}`);
-      });
-
-      // Start HTTP server for redirecting
-      http.createServer(httpApp).listen(httpPort, () => {
-        console.log(`HTTP Server running on port ${httpPort} (redirecting to HTTPS)`);
-      });
-
-      // Start HTTPS server
-      const httpsOptions = {
-        key: fs.readFileSync(keyPath),
-        cert: fs.readFileSync(certPath)
-      };
-
-      https.createServer(httpsOptions, app).listen(port, () => {
-        console.log(`HTTPS Server running on port ${port}`);
-      });
-    } else {
-      // Development without SSL - use a different port
-      const devPort = process.env.PORT || 3000;
-      http.createServer(app).listen(devPort, () => {
-        console.log(`HTTP Server running on port ${devPort} (development)`);
-      });
-    }
+    // Start HTTP server
+    http.createServer(app).listen(port, () => {
+      console.log(`HTTP Server running on port ${port}`);
+    });
 
   } catch (error) {
     console.error('Failed to start server:', error);
