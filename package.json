@@ -6,7 +6,7 @@
   "scripts": {
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
-    "prisma:deploy": "prisma migrate deploy",
+    "prisma:deploy": "npx prisma migrate deploy && npx prisma generate",
     "prisma:studio": "prisma studio",
     "start": "node dist/app.js",
     "dev": "nodemon src/app.ts",
