@@ -11,7 +11,7 @@ COPY . .
 
 
 # RUN npm run prisma:migrate
-# RUN npm run prisma:generate
+RUN npm run prisma:generate
 
 RUN npm run build
 
