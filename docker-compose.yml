@@ -7,7 +7,7 @@ services:
       - HTTP_PORT=3000
       - ALPHA_ADVANTAGE_API_KEY=${ALPHA_ADVANTAGE_API_KEY}
     volumes:
-      - ./authorized_users.json:/app/authorized_users.json:ro
+      # - ./authorized_users.json:/app/authorized_users.json:ro
       - /etc/letsencrypt/live/stocks.nikhilgarg.com/fullchain.pem:/app/cert.pem:ro 
       - /etc/letsencrypt/live/stocks.nikhilgarg.com/privkey.pem:/app/key.pem:ro 
     network_mode: bridge

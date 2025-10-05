@@ -24,9 +24,10 @@ const port = process.env.PORT || 3000;
 import fs from 'fs';
 import path from 'path';
 
-export const authorizedUsers: string[] = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
-);
+export const authorizedUsers: string[] = ["parag", "jimmy", "mukesh", "anshul", "nikhil", "mika", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFub24iLCJpYXQiOjE1MTYyMzkwMjJ9.dgLnboOI7ZkcQe_h5giTlJDIYv1r4p_NVTcLRbCbQfk"]
+// JSON.parse(
+//   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
+// );
 
 const overviewCache = new TTLCache({
   ttl: 60 * 60 * 24 * 1000, // 1 day
@@ -169,7 +170,7 @@ async function startServer() {
             console.log('Fetching live quote for', symbol);
             const quote = await fetchRealtimeQuote(symbol);
             // reformat options to match the response format
-            res.json({date: fromStrToDate(getLastTradingDay()), price: Number(quote)});
+            res.json({ date: fromStrToDate(getLastTradingDay()), price: Number(quote) });
             return;
           }
         }
@@ -248,7 +249,7 @@ async function startServer() {
               last: Number(option.last),
               mark: Number(option.mark),
             }));
-            res.json({puts: optionsResponse});
+            res.json({ puts: optionsResponse });
             return;
           }
         }
