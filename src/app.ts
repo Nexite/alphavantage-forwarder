@@ -21,9 +21,6 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-import fs from 'fs';
-import path from 'path';
-
 export const authorizedUsers: string[] = ["parag", "jimmy", "mukesh", "anshul", "nikhil", "mika", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6ImFub24iLCJpYXQiOjE1MTYyMzkwMjJ9.dgLnboOI7ZkcQe_h5giTlJDIYv1r4p_NVTcLRbCbQfk"]
 // JSON.parse(
 //   fs.readFileSync(path.join(__dirname, '..', 'authorized_users.json'), 'utf-8')
@@ -90,6 +87,22 @@ async function startServer() {
       } catch (error) {
         console.error('Failed to get historical options', error);
         res.status(500).json({ error: 'Failed to get historical options' });
+      }
+    });
+
+    app.get('/health', (req, res) => {
+      try {
+        res.json({ 
+          status: 'healthy', 
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime()
+        });
+      } catch (error) {
+        res.status(500).json({ 
+          status: 'unhealthy', 
+          error: 'Health check failed',
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
