@@ -9,10 +9,12 @@ interface QueuedRequest {
 class AlphaVantageQueue {
     private queue: QueuedRequest[] = [];
     private readonly MAX_REQUESTS_PER_MINUTE = 600;
+    private readonly MAX_REQUESTS_PER_SECOND = 20;
     private requestTimestamps: number[] = [];
     private isProcessing = false;
-    private readonly BATCH_SIZE = 600;
-    private readonly WINDOW_SIZE = 60000;
+    private readonly BATCH_SIZE = 20; // Changed to match per-second limit
+    private readonly WINDOW_SIZE = 60000; // 1 minute
+    private readonly SECOND_WINDOW_SIZE = 1000; // 1 second
     private readonly DEFAULT_PRIORITY = 10;
 
     constructor() {
@@ -24,7 +26,14 @@ class AlphaVantageQueue {
 
     private get availableSlots(): number {
         const oneMinuteAgo = Date.now() - this.WINDOW_SIZE;
-        return this.MAX_REQUESTS_PER_MINUTE - this.requestTimestamps.filter(ts => ts > oneMinuteAgo).length;
+        const inMinute = this.requestTimestamps.filter(ts => ts > oneMinuteAgo).length;
+        const oneSecondAgo = Date.now() - this.SECOND_WINDOW_SIZE;
+        const inSecond = this.requestTimestamps.filter(ts => ts > oneSecondAgo).length;
+
+        const minuteSlots = this.MAX_REQUESTS_PER_MINUTE - inMinute;
+        const secondSlots = this.MAX_REQUESTS_PER_SECOND - inSecond;
+
+        return Math.min(minuteSlots, secondSlots);
     }
 
     private async executeRequest(request: QueuedRequest): Promise<void> {
@@ -53,6 +62,12 @@ class AlphaVantageQueue {
                 return;
             }
 
+            if (data.Information?.includes('Burst pattern detected')) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+                this.queue.unshift({ ...request });
+                return;
+            }
+
             this.requestTimestamps.push(Date.now());
             request.resolve(data);
         } catch (error) {
@@ -74,8 +89,17 @@ class AlphaVantageQueue {
                 const available = this.availableSlots;
                 
                 if (available === 0) {
-                    const oldestTimestamp = this.requestTimestamps[0];
-                    const waitTime = Math.max(10, oldestTimestamp + this.WINDOW_SIZE - Date.now());
+                const oldestTimestamp = this.requestTimestamps[0];
+                const now = Date.now();
+                // Calculate wait time based on the oldest request in the last minute window
+                const waitTimeMinute = oldestTimestamp + this.WINDOW_SIZE - now;
+
+                // Calculate wait time based on the oldest request in the last second window
+                const oneSecondAgo = now - this.SECOND_WINDOW_SIZE;
+                const oldestSecondTimestamp = this.requestTimestamps.find(ts => ts > oneSecondAgo) || now;
+                const waitTimeSecond = oldestSecondTimestamp + this.SECOND_WINDOW_SIZE - now;
+
+                const waitTime = Math.max(10, waitTimeMinute, waitTimeSecond);
                     await new Promise(resolve => setTimeout(resolve, waitTime));
                     continue;
                 }
@@ -87,7 +111,7 @@ class AlphaVantageQueue {
                 
                 const now = Date.now();
                 const batchPromises = batch.map((request, index) => {
-                    return new Promise(resolve => setTimeout(resolve, index * 2))
+                return new Promise(resolve => setTimeout(resolve, index * (this.SECOND_WINDOW_SIZE / this.MAX_REQUESTS_PER_SECOND)))
                         .then(() => this.executeRequest(request));
                 });
 
@@ -134,7 +158,7 @@ class AlphaVantageQueue {
             currentRate: recentRequests.length,
             availableSlots: this.availableSlots,
             requestsInLastMinute: recentRequests.length,
-            requestsInLastSecond: recentRequests.filter(ts => ts > now - 1000).length,
+            requestsInLastSecond: recentRequests.filter(ts => ts > now - this.SECOND_WINDOW_SIZE).length,
             queueByPriority
         };
     }

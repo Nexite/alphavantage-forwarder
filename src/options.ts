@@ -247,8 +247,11 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
             // Transform the new data directly
             const newOptions = missingOptions.map(optionsResponse => {
                 // console.log(optionsResponse)
-                if (optionsResponse.data?.length === 0 && optionsResponse.message.startsWith("No data for symbol")) {
+                if ((!optionsResponse.data || optionsResponse.data?.length === 0) && optionsResponse.message?.startsWith("No data for symbol")) {
                     console.log(`optionsresponse ${optionsResponse.message}`)
+                    return undefined
+                } else if (!optionsResponse.data && !optionsResponse.message) {
+                    console.log(`optionsresponse1 ${JSON.stringify(optionsResponse)}`)
                     return undefined
                 }
                 return {
@@ -283,7 +286,7 @@ export const getHistoricalOptionsRange = async (symbol: string, days: number, sk
             }))
         }, ...options]
     }
-
+    // console.log(options)
     return options.map(o => ({
         date: o.date,
         puts: o.puts.map(p => ({
