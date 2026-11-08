@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "packages": {
+    "node": "20"
+  },
+  "buildAptPackages": [
+    "openssl",
+    "python3",
+    "make",
+    "g++"
+  ],
+  "steps": {
+    "build": {
+      "commands": [
+        "npm run prisma:generate",
+        "npm run build"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "npm run prisma:deploy && npm run start",
+    "aptPackages": [
+      "openssl",
+      "curl"
+    ]
+  }
+}
