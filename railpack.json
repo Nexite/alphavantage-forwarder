@@ -19,7 +19,8 @@
     "startCommand": "npm run prisma:deploy && npm run start",
     "aptPackages": [
       "openssl",
-      "curl"
+      "curl",
+      "wget"
     ]
   }
 }
